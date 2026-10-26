@@ -2,9 +2,28 @@
 
 This covers the self-hosting hands-on that follows the concepts lecture. It is written for the person at the front of the room, not for students.
 
-**Assumes:** students have completed [00-prerequisites.md](00-prerequisites.md) at home, and have just sat through the concepts block ([slides/concepts.html](../slides/concepts.html)).
+**Assumes:** students have completed [00-prerequisites.md](../docs/00-prerequisites.md) at home, and have just sat through the concepts block ([slides/concepts.html](../slides/concepts.html)).
 
 **Goal:** every student leaves with `curl` → LiteLLM → llama-swap → llama.cpp → a model on disk, working and understood. Not "seen a demo" — *working on their own machine*.
+
+---
+
+## Where this block sits in the day
+
+The repo covers the self-hosting block only. The full-day shape, so you know what surrounds you:
+
+| Time | Block | Material |
+|------|-------|----------|
+| 20 min | Mentimeter — gauge the room | — |
+| 1 h 40 | Concepts: the five layers, engines, quantisation, context, tool calling | [01-concepts.md](../docs/01-concepts.md) + [slides/concepts.html](../slides/concepts.html) |
+| 15 min | Break | — |
+| 45 min | **Hands-on:** llama.cpp → llama-swap → LiteLLM | this runbook; docs 02, 03, 04 |
+| — | *lunch* | — |
+| 2 h | Agents with Google ADK (self-hosted + cloud alternative) | *Traian* |
+| 30 min | Skills / MCP / agentic concepts | *Tudor* |
+| 1 h | Harnesses + MCP hands-on | *separate material* |
+
+Coordinate handoffs with the other blocks: students arrive at yours with prerequisites done and leave needing a working gateway for the ADK session that follows.
 
 ---
 
@@ -251,10 +270,10 @@ curl -s http://127.0.0.1:8090/running  # is anything actually loaded?
 
 ## Afterwards
 
-- [ ] Collect the failure modes you actually hit and add them to [troubleshooting.md](troubleshooting.md). The next run should be easier than this one.
+- [ ] Collect the failure modes you actually hit and add them to [troubleshooting.md](../docs/troubleshooting.md). The next run should be easier than this one.
 - [ ] Note which timings were wrong. 45 minutes is optimistic; if you consistently overrun at a particular block, that block needs restructuring, not more hurrying.
 - [ ] Re-verify versions before the next cohort. Everything here was checked on **2026-10-26**; llama-swap ships releases weekly and LiteLLM's image tags move.
 
 ---
 
-**Related:** [README.md](../README.md#for-facilitators) has the full-day shape and the pre-day checklist · [troubleshooting.md](troubleshooting.md) is what you send students to
+**Related:** [troubleshooting.md](../docs/troubleshooting.md) is what you send students to · the student-facing entry point is [README.md](../README.md)

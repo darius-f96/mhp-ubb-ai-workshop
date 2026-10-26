@@ -346,7 +346,7 @@ models:
     cmd: llama-server -hf ${MODEL_ID} --port ${PORT}
 ```
 
-**Do not do this in a classroom.** Every student triggers their own multi-GB download at the same moment, with no coordination and no shared cache. Pre-download with [`scripts/download-models.sh`](../scripts/download-models.sh), or use the instructor's mirror — see [offline-models.md](offline-models.md).
+**Fine at home; bad on workshop day.** If a whole room does this at once, every laptop triggers its own multi-GB download at the same moment, with no coordination and no shared cache. Pre-download with [`scripts/download-models.sh`](../scripts/download-models.sh), or use the room's mirror — see [offline-models.md](offline-models.md).
 
 ---
 

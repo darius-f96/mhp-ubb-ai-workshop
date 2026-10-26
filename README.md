@@ -63,8 +63,6 @@ Supporting material:
 - [Exercises](exercises/) — the graded bits, including a dependency-free [local RAG implementation](exercises/rag/rag.py)
 - Slides — open in any browser, no server needed, MHP-branded: [concepts](slides/concepts.html) (34 slides, the 1h40 lecture) · [qwen serve](slides/qwen-serve.html) (15 slides)
 
-Teaching this? Start with the [facilitator runbook](docs/facilitator-runbook.md) — timings for the 45-minute hands-on, plus the failure modes ranked by how much of your session each one will eat.
-
 ---
 
 ## The 15-minute version
@@ -146,7 +144,7 @@ For those, the stack you build here routes to a cloud model. That is a feature, 
 │   └── qwen/              settings.json pointing at your local stack
 ├── scripts/
 │   ├── download-models.sh fetch the model set (mirror → hf → curl)
-│   ├── serve-mirror.sh    instructor: serve models to the room
+│   ├── serve-mirror.sh    serve models to the whole room over HTTP
 │   ├── bootstrap.sh       check your machine is ready
 │   └── healthcheck.sh     is every layer of your stack up?
 ├── exercises/             the graded work
@@ -157,54 +155,15 @@ The files in `configs/` are the same ones the guides walk you through writing. C
 
 ---
 
-## For facilitators
-
-### Suggested timing
-
-This repo covers the self-hosting block. A full-day shape that has worked:
-
-| Time | Block | Material |
-|------|-------|----------|
-| 20 min | Mentimeter — gauge the room | — |
-| 1 h 40 | Concepts: the five layers, engines, quantisation, context, tool calling | [01-concepts.md](docs/01-concepts.md) + [slides](slides/) |
-| 15 min | Break | — |
-| 45 min | **Hands-on:** llama.cpp → llama-swap → LiteLLM | docs 02, 04, 05 |
-| — | *lunch* | — |
-| 2 h | Agents with Google ADK (self-hosted + cloud alternative) | *Traian* |
-| 30 min | Skills / MCP / agentic concepts | *Tudor* |
-| 1 h | Harnesses + MCP hands-on | *separate material* |
-
-### Before the day
-
-- [ ] Download the full model set on your machine: `./scripts/download-models.sh --all` (~16 GB)
-- [ ] Test `./scripts/serve-mirror.sh` and note the IP you will announce
-- [ ] Pre-pull the Docker image so the room is not all pulling at once: `docker pull ghcr.io/berriai/litellm:v1.106.4` (match the pin in `configs/litellm/docker-compose.yml`; do **not** use `main-latest`, which is currently the stale one)
-- [ ] Ask the venue about **client isolation** on guest Wi-Fi — it silently breaks the LAN mirror. Get on the same SSID as the students or bring a travel router.
-- [ ] Have a cloud API key ready (OpenRouter or Gemini free tier) for the fallback demo, and for students whose laptops cannot cope
-- [ ] Bring USB sticks with the `core` model set as a last resort
-
-### During
-
-- [ ] Run `bootstrap.sh` at the start and have students fix what it flags — far cheaper to find problems now than mid-exercise
-- [ ] The mirror is the single highest-leverage thing you can do. Announce the address early, put it on a slide, leave it up.
-- [ ] Watch for the two failure modes that consume the most time: **Docker memory limits** (model gets OOM-killed, looks like a crash) and **port conflicts** (`:8080` already in use). Both are in [troubleshooting.md](docs/troubleshooting.md).
-- [ ] Students with 8 GB of RAM will not keep up. Pair them with someone, or point them at the cloud fallback. Do not let them burn the session on an impossible config.
-
-### The teaching beats that land
-
-- **SmolLM2-135M vs Qwen3-1.7B, same prompt.** Five minutes, and scale stops being abstract.
-- **Ask a 1.7B model to call a tool.** It will fumble the JSON. This is why agents need big models, and no amount of explanation substitutes for watching it fail.
-- **`llama-bench` on their own machine.** They stop guessing and start knowing.
-- **Watch the KV cache line in llama.cpp's startup log** while raising `-c`. Context cost becomes visible.
-- **Kill llama-swap mid-request** and show LiteLLM falling back to the cloud. Resilience is a concept until they see it happen.
-
----
-
 ## Licence and credits
 
 Material in this repo is provided for teaching. Model weights are distributed by their authors under their own licences — check each one before reuse. See [models.md](docs/models.md#licences--read-this-once).
 
 Tools covered here are all open source: [llama.cpp](https://github.com/ggml-org/llama.cpp), [llama-swap](https://github.com/mostlygeek/llama-swap), [LiteLLM](https://github.com/BerriAI/litellm), [vLLM](https://github.com/vllm-project/vllm), [Qwen Code](https://github.com/QwenLM/qwen-code), [OpenCode](https://github.com/anomalyco/opencode).
+
+---
+
+*Running one of these sessions? Session timings, pre-day checklists and failure-mode triage live in [`trainers/`](trainers/). Everything else in this repo is written for you, the student.*
 
 ---
 

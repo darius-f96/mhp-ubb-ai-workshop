@@ -1,15 +1,16 @@
 #!/usr/bin/env bash
-# Serve the local model cache to a room full of students.
+# Serve a local model cache to a whole room over plain HTTP.
 #
-# INSTRUCTOR-ONLY. Runs a plain HTTP file server over your model directory so a
-# whole class can pull weights from you instead of from Hugging Face. Saves the
-# venue Wi-Fi, which is the single most common way a hands-on session dies.
+# Run this on whichever machine holds the models and has a routable IP —
+# typically one laptop in the room, so everyone else pulls weights from it
+# instead of from Hugging Face. Saves the venue Wi-Fi, which is the single
+# most common way a hands-on session dies.
 #
 # Usage:
 #   ./serve-mirror.sh                    # serve ~/models on :8000
 #   MODEL_DIR=/data/models PORT=9000 ./serve-mirror.sh
 #
-# Students then run:
+# Clients then run:
 #   MIRROR=http://YOUR-IP:8000 ./scripts/download-models.sh
 #
 # Directory layout expected (what download-models.sh produces, mirrored per repo):
@@ -41,7 +42,7 @@ cat <<BANNER
  Model mirror
    directory : $MODEL_DIR  ($SIZE, $COUNT gguf files)
    listening : http://$IP:$PORT
-   tell the class to run:
+   download with:
      MIRROR=http://$IP:$PORT ./scripts/download-models.sh
 ─────────────────────────────────────────────────────────────
  Ctrl-C stops the mirror.

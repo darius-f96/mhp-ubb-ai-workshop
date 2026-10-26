@@ -322,23 +322,25 @@ The sessions it spawns use your normal Qwen Code configuration, so the `settings
 
 ---
 
-## Demo script
+## Six experiments to run yourself
 
-Six beats, none needing a GPU or a cloud account:
+None of these needs a GPU or a cloud account — just the daemon and the model you already have:
 
 1. **Start it.** `qwen serve` — note the printed URL, and that loopback needed no token.
 2. **Open the Web Shell.** Start a session against your local model.
-3. **Kill the network.** Turn off Wi-Fi mid-run, reconnect, watch the SSE ring replay what you missed.
-4. **Phone.** Re-run with `--local-control`, scan the QR, drive the same daemon from a handset.
-5. **Prove the auth model.** Re-run on a LAN IP; show `401` without `Authorization`, then success with it.
-6. **Show the ceiling.** `--max-sessions 2`, open a third, read the `503`.
+3. **Kill the network.** Turn off Wi-Fi mid-run, reconnect, and watch the SSE ring replay what you missed.
+4. **Use your phone.** Re-run with `--local-control`, scan the QR, drive the same daemon from a handset.
+5. **Prove the auth model.** Re-run on a LAN IP; confirm the `401` without `Authorization`, then success with it.
+6. **Find the ceiling.** `--max-sessions 2`, open a third session, read the `503`.
+
+Each one is a behaviour you can read off `qwen serve --help`. Doing them yourself teaches more than watching anyone else do them.
 
 ---
 
-## What to teach, and what to skip
+## What is stable, and what is experimental
 
-| Teach | Skip |
-|-------|------|
+| Safe to build on | Avoid — experimental or private |
+|------------------|--------------------------------|
 | Loopback vs LAN auth model | `--profile hosted-harness` and capability digests |
 | Web Shell and phone access | Agent Host control-plane wiring |
 | SSE replay surviving a refresh | `--experimental-paired-engines` |
@@ -346,7 +348,7 @@ Six beats, none needing a GPU or a cloud account:
 | `--workspace` isolation | `--enable-session-shell` |
 | `--local-control` QR pairing | Journal byte-cap tuning |
 
-The left column is durable and easy to demonstrate. The right column is private, experimental, or explicitly documented as not-yet-implemented — teaching it means teaching something that will not survive to next semester.
+The left column is durable and safe to experiment with. The right column is private, experimental, or explicitly documented as not-yet-implemented — a config copied from it may not even boot on the next release. Spend your time on the left.
 
 ---
 

@@ -14,33 +14,33 @@ Twenty-five laptops pulling 2 GB from Hugging Face at the same moment will satur
 
 ## Option 1 — the LAN mirror (what we will use)
 
-The instructor runs [`scripts/serve-mirror.sh`](../scripts/serve-mirror.sh), which serves their model cache over plain HTTP on the venue network.
+One machine in the room runs [`scripts/serve-mirror.sh`](../scripts/serve-mirror.sh), which serves its model cache over plain HTTP on the venue network. The address should be announced early and left on a slide — if you missed it, ask.
 
-**Instructor:**
+**You (downloading):**
+
+```bash
+MIRROR=http://HOST-IP:8000 ./scripts/download-models.sh
+```
+
+That is it. The script uses the mirror for everything and falls back to Hugging Face if the mirror is unreachable.
+
+**Hosting a mirror yourself** — any machine with the model set and a routable IP works, including yours for a study group:
 
 ```bash
 ./scripts/serve-mirror.sh
 ```
 
-It prints the address to announce:
+It prints the address to hand out:
 
 ```
 ─────────────────────────────────────────────────────────────
  Model mirror
-   directory : /home/instructor/models  (16G, 14 gguf files)
+   directory : /home/someone/models  (16G, 14 gguf files)
    listening : http://192.168.1.50:8000
-   tell the class to run:
+   download with:
      MIRROR=http://192.168.1.50:8000 ./scripts/download-models.sh
 ─────────────────────────────────────────────────────────────
 ```
-
-**Students:**
-
-```bash
-MIRROR=http://INSTRUCTOR-IP:8000 ./scripts/download-models.sh
-```
-
-That is it. The script uses the mirror for everything and falls back to Hugging Face if the mirror is unreachable.
 
 Check the mirror is up before blaming anything else:
 

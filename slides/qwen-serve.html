@@ -438,27 +438,27 @@ browser             curl / script         another qwen
   <div class="sband"><span class="copy">© MHP Management- und IT-Beratung GmbH</span></div>
   <div class="smain">
     <div class="logo-n"></div>
-    <h2 class="big-h">What we will actually run</h2>
+    <h2 class="big-h">Six experiments to run yourself</h2>
     <ol style="font-size:clamp(13px,1.5vw,20px)">
       <li><strong>Start it.</strong> <code>qwen serve</code> — note the printed URL, and that loopback needed no token.</li>
-      <li><strong>Open the Web Shell</strong> in a browser. Start a session against the local model.</li>
-      <li><strong>Kill the network.</strong> Turn off Wi-Fi mid-run, reconnect, watch the SSE ring replay what you missed.</li>
-      <li><strong>Phone.</strong> Re-run with <code>--local-control</code>, scan the QR, drive the same daemon from a handset.</li>
-      <li><strong>Prove the token.</strong> Re-run on a LAN IP; show the 401 without <code>Authorization</code>, then success with it.</li>
-      <li><strong>Show the ceiling.</strong> <code>--max-sessions 2</code>, open a third, read the <code>503</code>.</li>
+      <li><strong>Open the Web Shell</strong> in a browser. Start a session against your local model.</li>
+      <li><strong>Kill the network.</strong> Turn off Wi-Fi mid-run, reconnect, and watch the SSE ring replay what you missed.</li>
+      <li><strong>Use your phone.</strong> Re-run with <code>--local-control</code>, scan the QR, drive the same daemon from a handset.</li>
+      <li><strong>Prove the token.</strong> Re-run on a LAN IP; confirm the 401 without <code>Authorization</code>, then success with it.</li>
+      <li><strong>Find the ceiling.</strong> <code>--max-sessions 2</code>, open a third session, read the <code>503</code>.</li>
     </ol>
-    <div class="note">Every step is a behaviour you can read off <code>--help</code>. Nothing needs a GPU, a cloud account, or a model bigger than the 1.7B you already downloaded.</div>
+    <div class="note">Every one of these is a behaviour you can read off <code>--help</code>. None needs a GPU, a cloud account, or a model bigger than the 1.7B you already downloaded.</div>
   </div>
   <div class="foot" style="margin-left:clamp(120px,26vw,330px)"><span></span><span class="pg"></span></div>
 </section>
 
 <!-- 14 · TEACH VS SKIP -->
 <section class="slide">
-  <header class="hband"><h2>What to teach, and what to leave alone</h2><div class="logo-w"></div></header>
+  <header class="hband"><h2>What is stable, and what is experimental</h2><div class="logo-w"></div></header>
   <div class="body">
     <div class="grid g2">
       <div class="card ok">
-        <h4>Show these</h4>
+        <h4>Safe to build on</h4>
         <ul>
           <li>Loopback vs LAN auth model</li>
           <li>Web Shell + phone access</li>
@@ -469,7 +469,7 @@ browser             curl / script         another qwen
         </ul>
       </div>
       <div class="card warn">
-        <h4>Skip these</h4>
+        <h4>Avoid — experimental or private</h4>
         <ul>
           <li><code>--profile hosted-harness</code> + capability digests</li>
           <li>Agent Host control-plane wiring</li>
@@ -480,7 +480,7 @@ browser             curl / script         another qwen
         </ul>
       </div>
     </div>
-    <div class="note">The left column is durable and easy to demonstrate. The right column is private, experimental, or explicitly documented as not-yet-implemented — teaching it means teaching something that will not survive to next semester.</div>
+    <div class="note">The left column is durable and safe to experiment with. The right column is private, experimental, or explicitly documented as not-yet-implemented — a config copied from it may not even boot on the next release.</div>
   </div>
   <div class="foot"><span>© MHP Management- und IT-Beratung GmbH</span><span class="pg"></span></div>
 </section>
