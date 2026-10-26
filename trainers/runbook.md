@@ -1,16 +1,16 @@
 # Facilitator runbook — the 45-minute hands-on block
 
-This covers the self-hosting hands-on that follows the concepts lecture. It is written for the person at the front of the room, not for students.
+Reference for the self-hosting hands-on that follows the concepts lecture. Trainer material, not student material.
 
-**Assumes:** students have completed [00-prerequisites.md](../docs/00-prerequisites.md) at home, and have just sat through the concepts block ([slides/concepts.html](../slides/concepts.html)).
+**Prerequisites:** students have completed [00-prerequisites.md](../docs/00-prerequisites.md) at home and have attended the concepts block ([slides/concepts.html](../slides/concepts.html)).
 
-**Goal:** every student leaves with `curl` → LiteLLM → llama-swap → llama.cpp → a model on disk, working and understood. Not "seen a demo" — *working on their own machine*.
+**Outcome:** every student has `curl` → LiteLLM → llama-swap → llama.cpp → a model on disk working on their own machine.
 
 ---
 
-## Where this block sits in the day
+## Position in the day
 
-The repo covers the self-hosting block only. The full-day shape, so you know what surrounds you:
+The repo covers the self-hosting block only. Full-day schedule:
 
 | Time | Block | Material |
 |------|-------|----------|
@@ -23,59 +23,61 @@ The repo covers the self-hosting block only. The full-day shape, so you know wha
 | 30 min | Skills / MCP / agentic concepts | *Tudor* |
 | 1 h | Harnesses + MCP hands-on | *separate material* |
 
-Coordinate handoffs with the other blocks: students arrive at yours with prerequisites done and leave needing a working gateway for the ADK session that follows.
+The ADK session that follows depends on a working LiteLLM gateway on every student machine.
 
 ---
 
-## Before the day
+## Preparation (day before)
 
-Do all of this the day before, on the venue network if you can get access. Nothing here is optional.
+### Trainer machine
 
-### Your machine
+```bash
+./scripts/download-models.sh --all            # full model set, ~14 GB
+docker pull ghcr.io/berriai/litellm:v1.106.4  # pinned tag from configs/litellm/docker-compose.yml
+./scripts/bootstrap.sh                        # environment check
+hostname -I | awk '{print $1}'                # LAN IP for the mirror
+```
 
-- [ ] `./scripts/download-models.sh --all` — the full set, ~14 GB. Takes a while; start it early.
-- [ ] `docker pull ghcr.io/berriai/litellm:v1.106.4` — so the room is not all pulling at once. **Use the pinned tag from `configs/litellm/docker-compose.yml`, not `main-latest`** — `main-latest` is currently the *stale* one, and the old `main-v…-stable` family stopped being published at v1.83
-- [ ] Walk the entire student path yourself, on a clean user account if possible. You will find the thing that breaks.
-- [ ] `./scripts/bootstrap.sh` — fix everything it flags
-- [ ] Note your LAN IP for the mirror: `hostname -I | awk '{print $1}'`
+- The LiteLLM image is pulled in advance so the room does not pull it simultaneously.
+- The pinned tag is the one in `configs/litellm/docker-compose.yml`. `main-latest` is currently stale, and the `main-v…-stable` family stopped being published at v1.83.
+- A full run of the student path on a clean user account surfaces most breakages before the session.
 
-### The room
+### Venue network
 
-- [ ] **Ask the venue about client isolation on guest Wi-Fi.** This is the single highest-risk item on this list. Many guest networks block device-to-device traffic, which silently breaks the LAN mirror — and you will discover it only when 25 students report "connection refused" simultaneously. If you cannot get on the same SSID as the students, **bring a travel router** and create your own network.
-- [ ] Test `./scripts/serve-mirror.sh` from a second device on that network
-- [ ] Confirm the venue's actual bandwidth. If it is generous, you may not need the mirror — but have it ready anyway.
-- [ ] Put the mirror address **on a slide** and leave it up. Students will not remember it.
+- **Client isolation on guest Wi-Fi is the highest-risk item.** Many guest networks block device-to-device traffic, which breaks the LAN mirror silently — it shows up as "connection refused" for every student at once. A travel router with its own network avoids the dependency on the venue SSID.
+- `./scripts/serve-mirror.sh` can be verified from a second device on the same network.
+- With generous venue bandwidth the mirror may be unnecessary, but it costs nothing to have running.
+- The mirror address belongs on a slide that stays visible during the download phase.
 
 ### Fallbacks
 
-- [ ] A cloud API key (OpenRouter or Gemini free tier) in `configs/litellm/.env`. Needed for the resilience demo, and as a lifeboat for students whose laptops cannot cope.
-- [ ] USB sticks with the `core` model set (2.6 GB each). Last resort when the network is unusable.
-- [ ] Know which students have 8 GB of RAM **before** the session starts. They will not keep up, and finding out at minute 30 wastes their afternoon.
+- **Cloud API key** (OpenRouter or Gemini free tier) in `configs/litellm/.env`. Required for the resilience demo; also a fallback for laptops that cannot run local models.
+- **USB sticks** with the `core` model set (2.6 GB each). Last resort when the network is unusable.
+- **8 GB RAM machines** cannot keep up with the local stack. Identifying them before the session allows pairing or a cloud-fallback path from the start.
 
 ---
 
 ## Timings
 
-Total 45 minutes. It is tight; the timings assume you do not explain things the concepts block already covered.
+45 minutes total. The timings assume no repetition of material from the concepts block.
 
-| Time | Block | You do | They do |
-|------|-------|--------|---------|
-| 0:00 | **0 min** | — | *(arrive with prerequisites done)* |
-| 0:00 | **5 min** | Announce the mirror address. Put it on a slide. | `git clone`, `./scripts/bootstrap.sh` |
-| 0:05 | **8 min** | Circulate. Fix bootstrap failures. | `./scripts/download-models.sh` |
-| 0:13 | **10 min** | Demo on the projector first, then let them follow | `llama-server` + `curl` a completion |
-| 0:23 | **5 min** | — | `llama-bench` — **their own numbers** |
-| 0:28 | **8 min** | Demo the eviction, make them watch `/running` | `llama-swap` up, request two models |
-| 0:36 | **7 min** | The kill-the-backend demo is the highlight — do it loudly | LiteLLM up, `healthcheck.sh` |
-| 0:43 | **2 min** | Point at exercises | — |
+| Time | Duration | Trainer | Students |
+|------|----------|---------|----------|
+| 0:00 | 5 min | Mirror address on screen | `git clone`, `./scripts/bootstrap.sh` |
+| 0:05 | 8 min | Bootstrap support | `./scripts/download-models.sh` |
+| 0:13 | 10 min | Projector demo, then students follow | `llama-server` + `curl` a completion |
+| 0:23 | 5 min | — | `llama-bench` on their own machine |
+| 0:28 | 8 min | Eviction demo via `/running` | `llama-swap` up, request two models |
+| 0:36 | 7 min | Kill-the-backend demo | LiteLLM up, `healthcheck.sh` |
+| 0:43 | 2 min | Exercises handoff | — |
 
-**If you are running behind:** cut `llama-bench` (5 min) and move it to an exercise. Do **not** cut the LiteLLM fallback demo — it is the single most memorable thing in the session.
+**When behind schedule:** `llama-bench` (5 min) is the cheapest cut and works as an exercise. The LiteLLM fallback demo is the most memorable part of the session and is not a good cut.
 
-**If you are ahead:** let them do Exercise 2 (135M vs 1.7B) in the room. It lands better live than as homework.
+**When ahead of schedule:** Exercise 2 (135M vs 1.7B) works better live than as homework.
 
 ---
 
-## Minute-by-minute detail
+## Step by step
 
 ### 0:00 — Clone and check (5 min)
 
@@ -85,32 +87,35 @@ cd mhp-ubb-ai-workshop
 ./scripts/bootstrap.sh
 ```
 
-Say: *"This tells you what is broken before it costs you twenty minutes. Fix the red items now, ask me about the yellow ones."*
+`bootstrap.sh` reports problems before they cost time later. Red items are blockers; yellow items are warnings.
 
-**Watch for:** Docker not running (the most common red), Docker memory ceiling under 6 GB, and Node below 22.
+**Common failures:** Docker not running (most frequent), Docker memory ceiling under 6 GB, Node below 22.
 
-Note that bootstrap reports **occupied ports as a warning, not a failure** — deliberately, because once their stack is running those ports *should* be busy. If a student reads that as an error, it is a good teaching moment about what the check is actually for.
+Occupied ports are reported as a **warning, not a failure**, by design: once the stack is running, those ports are expected to be busy.
 
 ### 0:05 — Download (8 min)
 
-```bash
-./scripts/download-models.sh                                    # core set, 2.6 GB
-MIRROR=http://YOUR-IP:8000 ./scripts/download-models.sh         # if using the mirror
-```
-
-Start your mirror **before** you ask them to download:
+Mirror (trainer machine), started before students download:
 
 ```bash
 ./scripts/serve-mirror.sh
 ```
 
-**Watch for:** `401 Unauthorized` (gated repo — they need a HF account and to accept a licence; steer them to the ungated models in the core set), and downloads stalling on weak Wi-Fi. The script resumes, so "run it again" is usually the whole fix — say that out loud, because students assume a failed download means starting over.
+Students:
 
-**This is the block most likely to overrun.** If more than a few students are still downloading at 0:13, move on and let the rest catch up — the llama-server demo works on one model, and you can start it with whoever is ready.
+```bash
+./scripts/download-models.sh                                    # core set, 2.6 GB
+MIRROR=http://TRAINER-IP:8000 ./scripts/download-models.sh      # via the mirror
+```
 
-### 0:13 — Serve and talk to it (10 min)
+**Common failures:**
 
-Projector first, then they follow:
+- `401 Unauthorized` — gated repo; requires a HF account and an accepted licence. The core set contains ungated models that avoid this.
+- Stalled downloads on weak Wi-Fi — the script resumes, so re-running it is the fix. A failed download does not mean starting over.
+
+**This block is the most likely to overrun.** The llama-server demo needs only one model, so the session can continue with the students who are ready while the rest finish downloading.
+
+### 0:13 — Serve and query a model (10 min)
 
 ```bash
 llama-server -m ~/models/Qwen3-1.7B-Q4_K_M.gguf \
@@ -127,59 +132,62 @@ curl -s http://127.0.0.1:8080/v1/chat/completions \
   | jq -r '.choices[0].message.content'
 ```
 
-**Pause here.** Say: *"That is it. You are self-hosting an LLM. Everything else today is making it useful."*
+At this point the student is self-hosting an LLM; the remaining layers make it useful.
 
-Then point at the startup log and make them find two numbers:
+**Startup log:** two numbers are relevant here:
 
 - the **model size** in MiB
 - the **KV cache** size
 
-Ask someone to read theirs out. Then ask the room what happens if they raise `-c` to 32768 — let them predict, then have someone actually do it. This is where the context-cost concept stops being abstract.
+Raising `-c` to 32768 and restarting makes the KV cache grow visibly — this is where context cost becomes concrete.
 
-**Mention `-np 1` explicitly** and why: auto-parallel picks 4 slots and, if they set `-np 4` themselves, their 4096 context silently becomes 1024. Students who read ahead will hit this.
+**`-np 1`:** without it, auto-parallel picks 4 slots. With `-np 4`, the context is split across slots, so a 4096 context silently becomes 1024 per slot.
 
-**Watch for:** `Address already in use` (something on 8080 — change the port, and remind them to change it *everywhere*), and processes vanishing with no error (out of memory — lower `-c`).
+**Common failures:**
 
-### 0:23 — Measure their own machine (5 min)
+- `Address already in use` — something else is on 8080. A different port works, but it has to change everywhere it is referenced.
+- Process exits with no error — out of memory; lower `-c`.
+
+### 0:23 — Benchmark (5 min)
 
 ```bash
 llama-bench -m ~/models/Qwen3-1.7B-Q4_K_M.gguf -ngl 0
 ```
 
-Have three or four students call out their `tg128` number. Write them on the whiteboard. The spread across the room is itself the lesson — a 2019 ultrabook and an M-series MacBook differ by 5×.
+The `tg128` value is generation speed in tokens/second. Across a typical room it varies by around 5× (e.g. a 2019 ultrabook vs an M-series MacBook). These numbers answer "which model can I run" for each machine.
 
-Say: *"Now you know what to expect instead of guessing. Every 'which model should I use' question is answered by these two numbers."*
-
-Apple Silicon users should re-run without `-ngl 0` and compare. That gap is Metal.
+On Apple Silicon, running again without `-ngl 0` shows the Metal GPU speed-up.
 
 ### 0:28 — Several models, one port (8 min)
 
-**Before this block, have them edit three macros** in `configs/llama-swap/config.yaml`: `model-dir`, `llama-server-path`, and `ngl`. Do it on the projector. This is the most error-prone two minutes of the session — the config **hard-fails on an unknown macro**, and students will try `${HOME}` because it looks reasonable.
+Three macros in `configs/llama-swap/config.yaml` need machine-specific values: `model-dir`, `llama-server-path`, and `ngl`. This is the most error-prone part of the session.
 
-Say explicitly: *"llama-swap substitutes its own macros, not environment variables. `${HOME}` will not work. That is deliberate — a typo fails loudly at startup instead of running a broken command."*
+llama-swap substitutes its own macros, **not environment variables** — `${HOME}` does not work. The config **hard-fails on an unknown macro**, so a typo fails at startup instead of running a broken command.
 
 ```bash
 llama-swap --config configs/llama-swap/config.yaml --listen 127.0.0.1:8090
 ```
 
-**Foreground, always.** When a model fails to start, the reason is in this log. Daemonising now means debugging blind.
-
-Then make them watch the eviction:
+llama-swap runs in the **foreground**: when a model fails to start, the reason appears in this log.
 
 ```bash
-curl -s http://127.0.0.1:8090/v1/models | jq -r '.data[].id'   # lists everything
+curl -s http://127.0.0.1:8090/v1/models | jq -r '.data[].id'   # lists every configured model
 curl -s http://127.0.0.1:8090/running | jq                     # nothing loaded yet
 ```
 
-Point out that **listing is not proof of health** — `/v1/models` starts nothing.
+**Listing is not proof of health** — `/v1/models` starts nothing.
 
-Request `coder`, time it (cold). Request `coder` again, time it (warm). Then request `chat` and immediately check `/running` — the coder is gone.
+Eviction sequence:
 
-Say: *"That eviction is the entire point. It is the difference between 'I can run one model' and 'I have a local model service.'"*
+1. Request `coder` — cold start, slow.
+2. Request `coder` again — warm, fast.
+3. Request `chat`, then query `/running` — `coder` has been evicted.
 
-**Watch for:** `upstream command exited prematurely`. This is the #1 llama-swap failure and the message is deliberately unhelpful. Teach the fix once, loudly: **take the `cmd` from the config, replace `${PORT}` with a real number, and run it by hand.** Then you get a real error.
+The eviction is what turns "one model" into "a local model service."
 
-### 0:36 — The gateway, and the demo that lands (7 min)
+**Common failure:** `upstream command exited prematurely` — the #1 llama-swap failure, with an unhelpful message. Diagnosis: take the `cmd` for that model from the config, replace `${PORT}` with a real number, and run it by hand. The real error then appears.
+
+### 0:36 — Gateway and failover (7 min)
 
 ```bash
 cd configs/litellm
@@ -187,13 +195,13 @@ cp .env.example .env
 nano .env                    # set LITELLM_MASTER_KEY; cloud key optional
 docker compose up -d
 cd ../..
-set -a; . configs/litellm/.env; set +a     # ← load the key into THEIR shells too
+set -a; . configs/litellm/.env; set +a     # load the key into the student's shell
 ./scripts/healthcheck.sh
 ```
 
-**Say the `set -a` line out loud and put it on the slide.** `env_file:` feeds the *container*; the student's terminal never sees it. Every curl in this block and in Exercise 5 sends `$LITELLM_API_KEY`, so if it is unset they get a `401` from a healthy gateway, `healthcheck.sh` reports the gateway as broken, and they conclude LiteLLM is down — during the one demo you cannot afford to lose.
+**The `set -a` line is essential and belongs on the slide.** `env_file:` feeds the *container* only; the student's terminal never sees those variables. Every curl in this block and in Exercise 5 sends `$LITELLM_API_KEY`. If it is unset, a healthy gateway returns `401`, `healthcheck.sh` reports the gateway as broken, and LiteLLM appears to be down.
 
-**The demo:** kill llama-swap (`Ctrl-C` in its terminal), then:
+**Failover demo:** stop llama-swap (`Ctrl-C` in its terminal), then:
 
 ```bash
 curl -s http://127.0.0.1:4000/v1/chat/completions \
@@ -201,82 +209,83 @@ curl -s http://127.0.0.1:4000/v1/chat/completions \
   -d '{"model":"resilient","messages":[{"role":"user","content":"Say OK"}]}' | jq
 ```
 
-It still answers — from the cloud. Restart llama-swap and show it coming back.
+The request still succeeds, served by the cloud backend. After restarting llama-swap, traffic returns to the local model. Client code does not change at any point — that is the purpose of the gateway.
 
-Say: *"Your client code did not change. Not one line. That is the whole point of the gateway — and that is why a demo that dies when a service restarts is a bad demo."*
+**Common failures:**
 
-**Watch for:** the container-networking failure — routes list fine but every completion fails. It is almost always a missing `extra_hosts: host-gateway`, or `api_base` pointing at `127.0.0.1` instead of `host.docker.internal`. The fix is in the provided compose file, so this usually means they wrote their own. Diagnose it with:
+- **Container networking** — routes list fine but every completion fails. Cause: missing `extra_hosts: host-gateway`, or `api_base` pointing at `127.0.0.1` instead of `host.docker.internal`. The provided compose file already handles this, so it usually indicates a hand-written one. Diagnosis:
+
+  ```bash
+  docker exec litellm getent hosts host.docker.internal
+  ```
+
+  No IP printed → the `extra_hosts` line is missing or the container was not recreated.
+
+- **`401` on every request** — `LITELLM_API_KEY` not exported in the shell, or not matching `.env`.
+- **`.env` edits not taking effect** — env files are read at container *creation*; `docker compose up -d --force-recreate` is required, not `restart`.
+
+### 0:43 — Exercises (2 min)
+
+Exercises are in `exercises/README.md`: six in total, ending with `answers.md` pushed on a branch (which doubles as a Git exercise).
+
+Highest-value two: **Exercise 2** (135M vs 1.7B) and **Exercise 6** (agent, local vs cloud).
+
+---
+
+## Failure modes, ranked by time cost
+
+Ordered by observed impact, not by likelihood.
+
+| # | Failure | Why it is expensive | Diagnosis / fix |
+|---|---------|--------------------|-----------------|
+| 1 | **Docker memory ceiling** | Model gets OOM-killed with no error; looks like a crash and leads to reinstalls | `docker info --format '{{.MemTotal}}'`; raise in Settings → Resources |
+| 2 | **`host.docker.internal` unresolved** | Routes list fine, every completion fails; LiteLLM looks broken | `docker exec litellm getent hosts host.docker.internal` |
+| 3 | **`upstream command exited prematurely`** | Message gives no cause | Run the model's `cmd` by hand with a real port |
+| 4 | **Port conflicts** | Vague bind errors | `ss -ltnp \| grep :8080`; change the port *everywhere* |
+| 5 | **Gated model → 401** | Needs a HF account and licence acceptance mid-session | Use the ungated core set |
+| 6 | **Venue Wi-Fi collapse** | Everyone downloads at once | LAN mirror, address on a slide from the start |
+| 7 | **Thinking model → empty reply** | Looks exactly like a crash | Check `reasoning_content`; raise `max_tokens` or use `--reasoning-budget 0` |
+| 8 | **Macro typos in llama-swap config** | Hard failure, unfamiliar message | The error names the model and the field |
+| 9 | **Client isolation on guest Wi-Fi** | Mirror unreachable, no obvious cause | Travel router, or USB fallback |
+| 10 | **Tool calling on a 1.7B** | Not a bug, but looks like a broken setup | Expected behaviour — covered by Exercise 2 |
+
+---
+
+## High-impact demonstrations
+
+Worth protecting even when other parts are cut.
+
+- **SmolLM2-135M vs Qwen3-1.7B, same prompt.** Five minutes; makes model scale concrete. With a JSON-only output request, the 135M does not comply.
+- **Killing llama-swap while LiteLLM fails over.** Resilience shown by deliberately breaking a component.
+- **`llama-bench` numbers from the room on the whiteboard.** Replaces guessing with measured numbers; the spread across machines is the lesson.
+- **Raising `-c` live and reading the KV cache line.** Makes context cost visible.
+- **`-np 4` silently dropping context to 1024.** A trap students otherwise hit alone later.
+- **`/v1/models` listing a model that then fails to load.** Listing is not health — a debugging habit that generalises.
+
+---
+
+## Diagnosing student machines
+
+Three checks give a clearer picture than asking how it is going:
 
 ```bash
-docker exec litellm getent hosts host.docker.internal
+./scripts/bootstrap.sh                 # machine readiness
+./scripts/healthcheck.sh               # which layer is broken
+curl -s http://127.0.0.1:8090/running  # which models are actually loaded
 ```
 
-No IP printed → the `extra_hosts` line is missing or the container was not recreated.
+`healthcheck.sh` reports the **lowest** broken layer, which is the one to fix — layers above it are usually fine. Students can run it themselves; it resolves most problems without trainer involvement.
 
-Also: `401` on every request means they did not export `LITELLM_API_KEY` to match `.env`. And editing `.env` needs `docker compose up -d --force-recreate`, not `restart` — env files are read at container *creation*.
-
-### 0:43 — Hand off (2 min)
-
-Point at `exercises/README.md`. Six exercises, and they push `answers.md` on a branch at the end — which doubles as a Git exercise.
-
-Name the two that matter most if they only do two: **Exercise 2** (135M vs 1.7B) and **Exercise 6** (agent, local vs cloud).
+**8 GB RAM machines:** pairing with another student, or using the cloud fallback for the concept-focused exercises, avoids spending the session on a configuration that cannot work.
 
 ---
 
-## Failure modes, ranked by how much time they will cost you
+## Post-session maintenance
 
-These are ordered by observed pain, not by likelihood.
-
-| # | Failure | Why it is expensive | Your move |
-|---|---------|--------------------|-----------|
-| 1 | **Docker memory ceiling** | Model gets OOM-killed. Looks like a crash, produces no error, and students reinstall things | `docker info --format '{{.MemTotal}}'`; raise it in Settings → Resources |
-| 2 | **`host.docker.internal` unresolved** | Routes list fine, every completion fails. Students conclude LiteLLM is broken | `docker exec litellm getent hosts host.docker.internal` |
-| 3 | **`upstream command exited prematurely`** | The message says nothing. Students flail | Have them run the `cmd` by hand with a real port |
-| 4 | **Port conflicts** | Vague bind errors | `ss -ltnp \| grep :8080`; change it *everywhere* |
-| 5 | **Gated model → 401** | Needs a HF account and a licence click, mid-session | Steer them to the ungated core set |
-| 6 | **Venue Wi-Fi collapse** | Everyone downloads at once | Mirror. Announce it early, keep it on a slide |
-| 7 | **Thinking model → empty reply** | Looks exactly like a crash | Check `reasoning_content`; raise `max_tokens` or `--reasoning-budget 0` |
-| 8 | **Macro typos in llama-swap config** | Hard failure, unfamiliar message | The error names the model and field — read it to them once |
-| 9 | **Client isolation on guest Wi-Fi** | Mirror unreachable, no obvious cause | Travel router, or fall back to USB |
-| 10 | **Tool calling on a 1.7B** | Not a bug; students think their setup is wrong | Pre-empt it: *"this is supposed to fail — that is Exercise 2"* |
+- Failure modes encountered during the session belong in [troubleshooting.md](../docs/troubleshooting.md).
+- 45 minutes is optimistic. A block that overruns consistently needs restructuring, not faster delivery.
+- Versions were last verified on **2026-10-26**. llama-swap ships weekly and LiteLLM image tags move, so versions need re-checking before each cohort.
 
 ---
 
-## Teaching beats that reliably land
-
-Worth protecting time for, even if you cut something else.
-
-- **SmolLM2-135M vs Qwen3-1.7B, same prompt.** Five minutes, and model scale stops being abstract. Ask for JSON-only output; the 135M will not comply.
-- **Kill llama-swap and show LiteLLM failing over.** Resilience is a concept until they watch it happen because you broke it on purpose.
-- **`llama-bench` on their own machine, numbers on the whiteboard.** They stop guessing and start knowing. The spread across the room does the teaching for you.
-- **Raise `-c` live and read the KV cache line.** Context cost becomes visible in a way no diagram achieves.
-- **Have someone set `-np 4` and watch their context silently drop to 1024.** A trap they will otherwise hit alone, at home, confused.
-- **Show `/v1/models` listing a model that then fails to load.** Listing is not health. This habit generalises to every system they will ever debug.
-
----
-
-## Deciding who needs help
-
-Circulate with these three checks rather than asking "how's it going?" — students always say fine.
-
-```bash
-./scripts/bootstrap.sh                 # is their machine ready?
-./scripts/healthcheck.sh               # which layer is broken?
-curl -s http://127.0.0.1:8090/running  # is anything actually loaded?
-```
-
-`healthcheck.sh` reports the **lowest** broken layer, which is the one to fix — everything above it is usually fine. Teach students to run it themselves before raising a hand; it resolves most of their own problems and frees you for the ones that matter.
-
-**Pair up students with 8 GB of RAM** rather than letting them struggle. Or point them at the cloud fallback and have them do the exercises that are about concepts rather than horsepower. Do not let anyone spend the session on an impossible configuration.
-
----
-
-## Afterwards
-
-- [ ] Collect the failure modes you actually hit and add them to [troubleshooting.md](../docs/troubleshooting.md). The next run should be easier than this one.
-- [ ] Note which timings were wrong. 45 minutes is optimistic; if you consistently overrun at a particular block, that block needs restructuring, not more hurrying.
-- [ ] Re-verify versions before the next cohort. Everything here was checked on **2026-10-26**; llama-swap ships releases weekly and LiteLLM's image tags move.
-
----
-
-**Related:** [troubleshooting.md](../docs/troubleshooting.md) is what you send students to · the student-facing entry point is [README.md](../README.md)
+**Related:** [troubleshooting.md](../docs/troubleshooting.md) is the student-facing troubleshooting guide · the student entry point is [README.md](../README.md)
