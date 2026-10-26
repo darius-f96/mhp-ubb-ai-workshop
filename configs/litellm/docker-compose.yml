@@ -1,19 +1,23 @@
 services:
   litellm:
-    # Pinned, not `main-latest`: a floating tag can change under you mid-workshop
-    # and every student gets a different proxy. Re-pin deliberately, never accidentally.
+    # Pinned, and NOT to a floating tag. Two traps here, both verified 2026-10-26:
     #
-    # This exact tag was tested with this config.yaml: routes load, os.environ
-    # substitution works, chat + embeddings proxy correctly, and an unauthenticated
-    # request is rejected with 401.
+    #  1. `main-latest` sounds newest but is STALE — it was built 2026-09-16 while
+    #     `main-stable` was built 2026-10-23. The names mislead.
+    #  2. The old `main-v<X.Y.Z>-stable` family ENDED at main-v1.83.14-stable. There
+    #     is no `main-v1.106*-stable`. Current stable is the bare version tag.
     #
-    # To find newer stable tags (the registry caps the listing, so sort them):
+    # `v1.106.4`, `main-stable` and `latest` are byte-identical today (digest
+    # sha256:c169fb3a…). Pin the explicit version so a floating tag cannot move
+    # under you mid-workshop and give every student a different proxy.
+    #
+    # To find newer tags (the registry caps listing at 1000, so sort them):
     #   TOKEN=$(curl -s "https://ghcr.io/token?scope=repository:berriai/litellm:pull" | jq -r .token)
     #   curl -s -H "Authorization: Bearer $TOKEN" \
     #     "https://ghcr.io/v2/berriai/litellm/tags/list?n=1000" \
-    #     | jq -r '.tags[]' | grep 'stable$' | sort -V | tail
-    # Note the image tags lag the PyPI version numbering; do not expect them to match.
-    image: ghcr.io/berriai/litellm:main-v1.66.0-stable
+    #     | jq -r '.tags[]' | grep -E '^v[0-9]' | sort -V | tail
+    # Image tags and PyPI versions use different numbering; do not expect them to match.
+    image: ghcr.io/berriai/litellm:v1.106.4
     container_name: litellm
     command: ["--config", "/app/config.yaml", "--port", "4000"]
     ports:

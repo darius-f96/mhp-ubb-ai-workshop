@@ -69,6 +69,8 @@ llama-server --version
 
 You should see a build number, for example `version: 9761 (721354fbd)`. Write yours down; behaviour differs between builds and instructors will ask.
 
+> **The default port changed in v0.7.0 — from `8080` to `9931`.** Verified two ways: `common/common.h:632` reads `int32_t port = 9931;`, and `tools/server/README.md` documents `--port PORT | port to listen (default: 9931)`. Any tutorial or slide saying "llama.cpp serves on 8080" is now out of date, and the failure mode is a bare `Connection refused` with nothing to explain it. **Every command in this repo passes `--port` explicitly for exactly this reason.** Do the same in your own notes.
+
 ---
 
 ## Step 1 — measure your machine before choosing a model
@@ -87,13 +89,15 @@ You get a markdown table. The two columns that matter:
 Useful variations:
 
 ```bash
-llama-bench -m MODEL.gguf -ngl 0 -r 3      # 3 repetitions instead of the default 5 (faster)
-llama-bench -m MODEL.gguf -ngl 0 -o csv    # machine-readable
-llama-bench --list-devices                 # what hardware llama.cpp can see
-llama-bench -hf ggml-org/Qwen3-1.7B-GGUF:Q4_K_M   # bench without downloading by hand
+llama-bench -m MODEL.gguf -ngl 0 -t 4 -r 3      # 3 reps, 4 threads (faster, laptop-realistic)
+llama-bench -m MODEL.gguf -ngl 0 -o csv          # machine-readable
+llama-bench --list-devices                       # what hardware llama.cpp can see
+llama-bench -hf ggml-org/Qwen3-1.7B-GGUF:Q4_K_M  # bench without downloading by hand
 ```
 
 Defaults, verified: `-p/--n-prompt 512`, `-n/--n-gen 128`, `-r 5` repetitions, `-o md` output.
+
+> **Always pass `-t` and `-ngl` explicitly.** `llama-bench` defaults to `-t 20` threads and `-ngl -1` (offload everything). Twenty threads is meaningless on a laptop and produces noise rather than a measurement, and `-ngl -1` will use a GPU you may not have or may not want in the number. `-ngl 0 -t 4` gives you a comparable CPU-only figure.
 
 **Read your `tg128` number and set expectations now.** Under ~5 tok/s is painful for chat; 10–20 is comfortable; 40+ is instant-feeling. Exercise 1 makes you do this properly.
 
@@ -146,12 +150,13 @@ Every flag below was verified against `llama-server --help`.
 |------|---------|-------|
 | `-m, --model FNAME` | — | Path to the `.gguf`. Env: `LLAMA_ARG_MODEL` |
 | `--host HOST` | `127.0.0.1` | Bind address. Ends in `.sock` → a UNIX socket instead |
-| `--port PORT` | `8080` | Env: `LLAMA_ARG_PORT` |
+| `--port PORT` | **`9931`** | **Changed from 8080 in v0.7.0.** Always pass it explicitly — see the warning below |
 | `-c, --ctx-size N` | `0` | **`0` means "load the model's own context"** — not zero. On a 128k model that is a huge KV cache. Always set this explicitly |
 | `-ngl, --n-gpu-layers N` | `auto` | Layers in VRAM. Accepts a number, `auto`, or `all`. `0` forces CPU |
 | `-np, --parallel N` | `-1` (auto) | Server slots. Auto chose **4** in testing — see the context warning below |
 | `-t, --threads N` | `-1` | CPU threads. Set to your *physical* core count; more hurts |
 | `-hf, --hf-repo <user>/<model>[:quant]` | unused | Download from Hugging Face on start |
+| `--fit [on\|off]` | **`on`** | Auto-shrinks arguments you did not set, to fit device memory. **This is why a `-c` you asked for sometimes comes up smaller** — read the log, do not trust the flag you typed |
 
 ### Quality and behaviour
 

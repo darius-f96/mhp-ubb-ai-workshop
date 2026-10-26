@@ -27,6 +27,21 @@ Check the published version and Node requirement yourself:
 npm view @qwen-code/qwen-code version engines
 ```
 
+Other paths, all verified to exist:
+
+```bash
+# Homebrew — the formula is `qwen-code` (pulls node + ripgrep as dependencies)
+brew install qwen-code
+
+# Standalone installer, no Node needed
+curl -fsSL https://qwen-code-assets.oss-cn-hangzhou.aliyuncs.com/installation/install-qwen-standalone.sh | bash
+
+# Windows (PowerShell)
+irm https://qwen-code-assets.oss-cn-hangzhou.aliyuncs.com/installation/install-qwen-standalone.ps1 | iex
+```
+
+For this workshop use **npm** — you already installed Node for the prerequisites, and `qwen update` works on it. Note that **ripgrep is a hard runtime dependency** either way; the brew formula pulls it for you, the npm path expects it present.
+
 **Update later:**
 
 ```bash
@@ -69,8 +84,15 @@ The shape:
 
 ```json
 {
+  "$schema": "https://qwenlm.github.io/qwen-code/settings.json",
   "env": {
     "WORKSHOP_LITELLM_KEY": "sk-workshop-change-me"
+  },
+  "security": {
+    "auth": { "selectedType": "openai" }
+  },
+  "model": {
+    "name": "local-chat"
   },
   "modelProviders": {
     "openai": [
@@ -81,7 +103,9 @@ The shape:
         "envKey": "WORKSHOP_LITELLM_KEY",
         "generationConfig": {
           "contextWindowSize": 8192,
-          "temperature": 0.2
+          "timeout": 300000,
+          "maxRetries": 1,
+          "samplingParams": { "temperature": 0.2, "max_tokens": 2048 }
         }
       }
     ]
@@ -99,11 +123,37 @@ Field by field:
 | `baseUrl` | Your gateway, **including `/v1`** |
 | `envKey` | The **name** of an env var holding the key — not the key itself |
 | `env` | Defines those variables. Keeps secrets out of the provider block |
-| `generationConfig` | Per-model generation settings |
+| `security.auth.selectedType` | `"openai"` starts on that protocol **with no interactive auth wizard**. Omit it and students hit a first-run `/auth` prompt |
+| `model.name` | Default model at startup; must match one of the `id`s |
+| `generationConfig` | Per-model generation settings — see the two rules below |
 
-Note `envKey` is indirection: the provider says *which* variable to read, and `env` supplies its value. That is why the key appears once and providers stay shareable.
+Note `envKey` is indirection: the provider says *which* variable to read, and `env` supplies its value. That is why the key appears once and providers stay shareable. **Credentials are never persisted in settings by design.**
 
-**Scope:** `~/.qwen/settings.json` is user-wide. `<project>/.qwen/settings.json` applies to one repo and **wins** over user scope. Use project scope to commit a team's model choice without committing secrets.
+For a keyless local server, any placeholder works — `"not-needed"` is the convention.
+
+### Two rules that will otherwise cost you an hour
+
+**1. `modelProviders` merges by REPLACE, not by merge.**
+
+A project-scope `.qwen/settings.json` that contains a `modelProviders` block **discards your entire user-scope catalogue**. There is no warning. Your models simply vanish from `/model`.
+
+This is why the workshop config goes in **user scope** (`~/.qwen/settings.json`), and the docs say so explicitly: *"Define `modelProviders` in the user-scope `~/.qwen/settings.json` whenever possible."*
+
+It is also the exact opposite of OpenCode, whose configs **merge**. If you use both tools, this is the difference most likely to burn you.
+
+**2. Provider entries are sealed — the docs call it "the impermeable provider layer".**
+
+> *"Top-level `model.generationConfig` values, including `contextWindowSize`, `modalities`, `customHeaders`, and `extra_body`, are **ignored for provider models**."*
+
+So for any model defined in `modelProviders`, every setting must live **inside that entry**. Consequences:
+
+- Fields you do not declare in the provider entry are `undefined` — they are **not** inherited from top-level `model.generationConfig`.
+- `samplingParams`, `customHeaders` and `extra_body` are **atomic objects**: the provider's value replaces the whole thing, no merging. If you set `samplingParams`, put *everything* you want inside it.
+- On OpenAI-compatible providers, setting `samplingParams` makes its keys ship to the wire verbatim **and skips reasoning injection entirely**. So `{samplingParams:{temperature:0.5}, reasoning:{effort:"max"}}` silently drops the reasoning field.
+
+**Scope precedence**, lowest to highest: hardcoded defaults → system-defaults (`/etc/qwen-code/system-defaults.json`) → **`~/.qwen/settings.json`** → **`.qwen/settings.json`** → system (`/etc/qwen-code/settings.json`) → env vars / `.env` → CLI arguments.
+
+> **One more trap worth knowing:** an older preview wrapped each provider in `{ "protocol": …, "models": [...] }`. That was reverted, and a wrapped entry is now **silently skipped** — no error, the models just never appear. If you copy a config from an old blog post and `/model` looks empty, this is why.
 
 ### The env-var route — and its trap
 
@@ -132,7 +182,18 @@ This is the second setting that decides whether things work.
 
 Qwen Code needs to know how large a model's context window is, to decide how much history to send and when to compact. It **infers that from the model name.** For names it recognises the guess is right. For `local-chat` — a name you invented — it has nothing to go on, and a wrong guess means requests that are too large, or history truncated far earlier than you expect.
 
-Pin it explicitly:
+The docs describe the mechanism as *"built-in defaults based on model name matching, with a constant fallback value"*, and note the setting *"defines the model's **assumed maximum** context capacity, not a per-request token limit."*
+
+**This was measured, not theorised.** Querying a running daemon's `GET /session/:id/context` for provider entries that specified no `contextWindowSize` returned:
+
+```json
+{"modelId":"qwen3.8-max(openai)",  "_meta":{"contextLimit":1000000}}
+{"modelId":"qwen3.7-plus(openai)", "_meta":{"contextLimit":1000000}}
+```
+
+**One million tokens**, inferred purely from the `qwen3.N-*` name shape. Point that at a local 4B model with an 8k window and the CLI will happily fill the request until the server rejects it. Worse, auto-compaction — which fires at `context.autoCompactThreshold`, default **0.85** — never triggers, because 0.85 × 1,000,000 is unreachable.
+
+Pin it explicitly, **inside the provider entry** (top-level `model.generationConfig` is ignored for provider models — see above):
 
 ```json
 "generationConfig": {
@@ -321,6 +382,34 @@ What it will not do: reliably refactor across files, hold a long plan in context
 That gap is the lesson. Run Exercise 6, then switch `--model` to `cloud-fast` and repeat the identical task. The difference is immediate and it is the clearest demonstration in the whole day of what model scale buys you — and therefore of when self-hosting is the right trade.
 
 Where a local model in an agent *is* genuinely fine: small self-contained tasks, classification, extraction, summarisation, and anything where the data must not leave the machine.
+
+### Levers that actually help a small model
+
+These are verified settings, not folklore. Use `/context detail` in a session to see exactly what is consuming your window — it is the single most useful diagnostic here, and it beats estimating.
+
+| Setting / flag | Default | Why it matters on a 0.6B–4B model |
+|----------------|---------|-----------------------------------|
+| `generationConfig.timeout` | **`120000` ms** | CPU inference on a 4B model routinely exceeds two minutes. The workshop config sets **`300000`**. This is the most common cause of "it just stopped" |
+| `model.skipStartupContext` | `false` | Set `true` to stop sending the startup workspace context every session. The docs suggest it exactly for this: *"Enable this if you … want to save tokens on startup."* |
+| `model.skipLoopDetection` | **`true`** (detection OFF) | Set `false` to **re-enable** streaming loop detection. Docs call it *"a guardrail in headless / non-interactive runs where stuck repetition can otherwise waste budget."* Tiny models loop — this is the cheap brake |
+| `model.maxToolCallsPerTurn` | `100` (adaptive, `1000` hard backstop) | Set an explicit small number like `10` for a hard per-turn cap. The unset default only halts on *repeated identical* calls |
+| `--max-tool-calls N` | unlimited | Cumulative cap for the run. Aborts with **exit code 55**. `0` = no tool calls at all |
+| `--max-session-turns N` | — | Turn budget |
+| `--max-wall-time 5m` | — | Wall-clock budget; accepts `90`, `30s`, `5m`, `1.5h`. Sub-second values are rejected as typos. Aborts with **exit code 55** |
+| `context.autoCompactThreshold` | `0.85` | Fraction of the window that triggers compaction. **Only meaningful once `contextWindowSize` is correct** — against a bogus 1M default it never fires |
+| `--fallback-model` | — | Up to 3 fallbacks for capacity errors (**429 / 503 / 529**). This is your "local first, cloud on failure" switch |
+| `QWEN_STREAM_IDLE_TIMEOUT_MS` | `240000` | **Env var only — there is no settings.json key.** Writing `streamMaxLifetimeMs` into settings does nothing |
+| `QWEN_STREAM_MAX_LIFETIME_MS` | `900000` | Total cap on one streaming response. A slow CPU model can hit this; `0` disables |
+
+**The framing that matters:** a 0.6B–4B model in an agentic loop is not a small version of a cloud model — it is a different tool. Pin `contextWindowSize`, cap the turn budget, expect single-file edits and shell commands to work and multi-file refactors to fail, and use the cloud model for planning.
+
+`--fallback-model` plus the `/model` picker make "local for cheap iterations, cloud for the hard step" a one-keystroke switch. That is the genuinely useful workflow, and it is the one worth teaching.
+
+### MCP eats your context
+
+Every MCP server adds its tool schemas to **every** request. On an 8k window, one chatty server can consume the entire budget before your prompt arrives.
+
+Run `/context detail` before and after adding a server. The difference is usually shocking, and it is the clearest possible demonstration of why "just add an MCP" is not free on a small model.
 
 ---
 

@@ -15,7 +15,7 @@ Do all of this the day before, on the venue network if you can get access. Nothi
 ### Your machine
 
 - [ ] `./scripts/download-models.sh --all` — the full set, ~16 GB. Takes a while; start it early.
-- [ ] `docker pull ghcr.io/berriai/litellm:main-v1.66.0-stable` — so the room is not all pulling at once
+- [ ] `docker pull ghcr.io/berriai/litellm:v1.106.4` — so the room is not all pulling at once. **Use the pinned tag from `configs/litellm/docker-compose.yml`, not `main-latest`** — `main-latest` is currently the *stale* one, and the old `main-v…-stable` family stopped being published at v1.83
 - [ ] Walk the entire student path yourself, on a clean user account if possible. You will find the thing that breaks.
 - [ ] `./scripts/bootstrap.sh` — fix everything it flags
 - [ ] Note your LAN IP for the mirror: `hostname -I | awk '{print $1}'`

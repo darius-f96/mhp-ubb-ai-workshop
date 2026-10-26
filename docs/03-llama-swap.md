@@ -165,11 +165,27 @@ Then run it in the foreground, so you can read what it is doing:
 llama-swap --config configs/llama-swap/config.yaml
 ```
 
-Default listen address is `:8080`. To be explicit, or to avoid a clash:
+Default listen address is `:8080` (or `:8443` with TLS). To be explicit, or to avoid a clash:
 
 ```bash
 llama-swap --config configs/llama-swap/config.yaml --listen 127.0.0.1:8090
 ```
+
+**Validate the config before running it** — it checks the YAML and exits without starting anything:
+
+```bash
+llama-swap --config configs/llama-swap/config.yaml --validate
+```
+
+This is the fastest feedback loop there is for a macro typo or a bad key, and it costs nothing. (Needs **v252 or newer**; older builds have no `-validate`.)
+
+Also worth knowing while learning: **`-watch-config`** reloads the YAML when you save it, so you can add a model live without restarting — and without evicting the ones already loaded.
+
+```bash
+llama-swap --config configs/llama-swap/config.yaml --watch-config
+```
+
+Go's flag package accepts single or double dashes, so `-config` and `--config` are the same flag.
 
 > **Run it in the foreground during the workshop.** When a model fails to start, the reason appears in this log. Daemonising it early means debugging blind, and `upstream command exited prematurely` tells you nothing about *why*.
 
@@ -237,8 +253,8 @@ A rule worth remembering: **`proxy` may only use `${PORT}` if `cmd` uses it too.
 | Key | Default | Purpose |
 |-----|---------|---------|
 | `models` | **required** | Your model definitions |
-| `healthCheckTimeout` | `500` | Seconds to wait for an engine to become healthy. **Raise this** — a cold load on a slow disk exceeds 500 easily. The workshop config uses `300` |
-| `startPort` | — | First port to hand out to engines |
+| `healthCheckTimeout` | `120` | Seconds to wait for an engine to become healthy; **minimum 15** (lower is clamped up). **Raise this** — a cold load that has to *download* a model blows past 120 easily. The workshop config uses `300` |
+| `startPort` | `5800` | First port handed out to engines, incremented per model |
 | `globalTTL` | `0` | Idle seconds before unloading any model; per-model `ttl` overrides |
 | `logLevel` | `info` | Verbosity |
 | `logToStdout` | `proxy` | What goes to stdout |
@@ -349,7 +365,15 @@ Now you get a real error instead of a one-line summary. Usually: wrong binary pa
 
 **Config changed but nothing happened**
 
-Restart llama-swap. Be aware that restarting **evicts every loaded model**, so the next request pays a cold load.
+Restart llama-swap, or run it with `-watch-config` so edits reload on save. Be aware that a plain restart **evicts every loaded model**, so the next request pays a cold load — `-watch-config` avoids that.
+
+**Validate before you debug**
+
+```bash
+llama-swap --config configs/llama-swap/config.yaml --validate
+```
+
+Catches macro typos and unknown keys without starting anything. Requires v252+.
 
 **Macro errors at startup**
 
@@ -357,7 +381,9 @@ Read them — they name the model and the field: `unknown macro '${foo}' found i
 
 **Model never becomes healthy**
 
-Raise `healthCheckTimeout`. The upstream default of 500 seconds is generous, but a first run that has to *download* the model can exceed it.
+Raise `healthCheckTimeout`. The upstream default is only **120 seconds**, and a first run that has to *download* the model will exceed it. The workshop config sets `300`.
+
+> One nuance if you are chasing a timeout: when an upstream reports `progress` on its health endpoint, **each change restarts the countdown**, so the timeout limits time *without progress* rather than total time. `llama-server`'s loading response does **not** report progress, so for llama.cpp it remains a hard total.
 
 Full list in [troubleshooting.md](troubleshooting.md#llama-swap).
 

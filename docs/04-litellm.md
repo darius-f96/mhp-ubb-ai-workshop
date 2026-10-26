@@ -37,15 +37,22 @@ docker compose up -d
 docker compose logs -f       # Ctrl-C to stop following; the container keeps running
 ```
 
-The compose file pins `ghcr.io/berriai/litellm:main-v1.66.0-stable`. **Pin deliberately, never float.** With `main-latest`, a new image can ship between a student's `docker pull` on Monday and yours on Tuesday, and you will debug two different proxies.
+> **The master key must start with `sk-`.** The docs state this as a requirement. Every key in this repo's examples does (`sk-workshop-change-me`) — keep that prefix if you change the value, or a newer LiteLLM may reject the key at startup rather than at request time.
 
-> Image tags and PyPI versions use different numbering and do not match. Do not go looking for an image called `1.106.4`.
+The compose file pins `ghcr.io/berriai/litellm:v1.106.4`. **Pin deliberately, never float** — and note two traps that are easy to fall into, both verified 2026-10-26:
+
+1. **`main-latest` sounds newest but is stale.** It was built 2026-09-16; `main-stable` was built 2026-10-23. The names mislead.
+2. **The `main-v<X.Y.Z>-stable` family ended** at `main-v1.83.14-stable`. There is no `main-v1.106*-stable`. Current stable is the **bare version tag**: `v1.106.4`.
+
+Today `v1.106.4`, `main-stable` and `latest` are byte-identical (digest `sha256:c169fb3a…`), so pinning the explicit version costs nothing and cannot move under you mid-workshop.
 
 Pre-pull before a workshop so a room is not all pulling at once:
 
 ```bash
-docker pull ghcr.io/berriai/litellm:main-v1.66.0-stable
+docker pull ghcr.io/berriai/litellm:v1.106.4
 ```
+
+> Image tags and PyPI versions use different numbering schemes and do not match. Do not go looking for an image called `1.40.3`.
 
 ### pip (no Docker)
 
@@ -124,13 +131,30 @@ api_key:  os.environ/LOCAL_API_KEY
 
 ## Verify it works
 
-**Is it alive?**
+**Is it alive?** These two need **no auth**, even with a master key set — which is what makes them the right first probe:
 
 ```bash
-curl -s http://127.0.0.1:4000/health/liveliness -H "Authorization: Bearer $LITELLM_API_KEY"
+curl -s http://127.0.0.1:4000/health/liveliness
+# → "I'm alive!"
+
+curl -s http://127.0.0.1:4000/health/readiness
+# → {"status":"healthy","db":"Not connected"}
 ```
 
-Returns `"I'm alive!"`.
+**Confirming your image pin actually took effect.** The plain readiness endpoint does *not* report a version — that detail is on `/health/readiness/details`, which needs the key:
+
+```bash
+curl -s http://127.0.0.1:4000/health/readiness/details \
+  -H "Authorization: Bearer $LITELLM_API_KEY" | jq '.litellm_version, .db'
+# → "1.106.4"
+# → "Not connected"
+
+# or straight from the container, no HTTP at all:
+docker exec litellm litellm --version
+# → LiteLLM: Current Version = 1.106.4
+```
+
+Worth doing once per student: a stale locally-cached image is invisible otherwise, and it is the kind of mismatch that makes two people in the same room get different behaviour from the same file.
 
 **Are your routes registered?**
 
@@ -140,11 +164,25 @@ curl -s http://127.0.0.1:4000/v1/models -H "Authorization: Bearer $LITELLM_API_K
 
 You should see `local-chat`, `local-coder`, `local-embed`, `resilient`, `cloud-fast`, `cloud-gemini`. This lists what LiteLLM is *configured* with — it does not prove the backend is up.
 
-**Auth is enforced.** Without the header you get `HTTP 401`, and the log records `No api key passed in`. That is expected behaviour, not a bug:
+**Auth is enforced.** Once `master_key` is set, *every* key-bearing endpoint needs the header — including `/v1/models` and `/health`. Without it you get `HTTP 401`, and the log records `No api key passed in`. That is expected behaviour, not a bug:
 
 ```bash
 curl -s -o /dev/null -w '%{http_code}\n' http://127.0.0.1:4000/v1/models    # → 401
+curl -s -o /dev/null -w '%{http_code}\n' http://127.0.0.1:4000/health        # → 401
 ```
+
+> This is the single most common student blocker: `/health/liveliness` returns 200, so they conclude the proxy is healthy, then `/v1/models` returns 401 and they think they broke something. **The 401 is caused by setting the master key**, not by a mistake.
+>
+> If you want zero auth friction on a laptop-bound workshop, simply **omit `general_settings.master_key`** — then all of these are open on localhost and there is nothing to misplace. The trade is that anything on your machine can use the proxy.
+
+**`/health` with a key does real work** — it sends a test request to every deployment and splits the results:
+
+```bash
+curl -s http://127.0.0.1:4000/health -H "Authorization: Bearer $LITELLM_API_KEY" | jq
+# → {"healthy_endpoints":[...], "unhealthy_endpoints":[...]}
+```
+
+Add `?model=local-chat` to test one route.
 
 **A real completion, end to end:**
 
@@ -238,11 +276,31 @@ The **provider prefix** is the pattern: `openai/`, `openrouter/`, `gemini/`, `an
 http://127.0.0.1:4000/ui
 ```
 
-Log in with `LITELLM_MASTER_KEY`. Useful for inspecting routes and trying requests from a browser.
+**It needs a database.** This is the part that surprises people: the admin UI's stated requirements are *"Requires proxy master key to be set"* **and** *"Requires db connected."* Without Postgres it will not give you a working UI, however valid your master key is.
 
-**Know its limit:** without a database, LiteLLM runs in **DB-less mode**. The master key works, but you cannot mint additional virtual keys or track spend from the UI. That is the right trade for a workshop — adding a Postgres dependency turns a five-minute setup into a fifty-minute one.
+That is fine, and deliberate. What works **DB-less** is the part that actually matters for this workshop:
 
-The config is deliberate about this:
+| Works without a database | Needs Postgres |
+|--------------------------|----------------|
+| Routing and load balancing | The admin UI (`/ui`) |
+| Fallbacks and retries | Virtual keys (only the master key works) |
+| `master_key` authentication | Budget enforcement (`max_budget` never fires) |
+| Everything in `config.yaml` | Spend tracking |
+
+Adding a Postgres dependency turns a five-minute setup into a fifty-minute one, and teaches nothing about self-hosting models. **Skip the UI.** Read your config and use `curl`.
+
+If you genuinely want the UI, LiteLLM ships a two-service quickstart that brings up the gateway plus Postgres:
+
+```bash
+curl -sSLO https://github.com/BerriAI/litellm/raw/main/docker/docker-compose.quickstart.yml
+printf 'LITELLM_MASTER_KEY=sk-%s\nLITELLM_SALT_KEY=sk-%s\n' \
+  "$(openssl rand -hex 32)" "$(openssl rand -hex 32)" > .env
+docker compose -f docker-compose.quickstart.yml up -d
+```
+
+Note `LITELLM_SALT_KEY` — it encrypts provider keys added through the UI. And **do not** set `disable_env_credential_login: true` before creating a DB admin user; the docs warn it *"will make you unable to log in."*
+
+The config is deliberate about staying DB-less:
 
 ```yaml
 litellm_settings:
@@ -250,7 +308,11 @@ litellm_settings:
   # no success_callback / failure_callback — those need a database
 ```
 
-`drop_params: true` makes LiteLLM discard parameters a backend does not support instead of erroring. With small local models behind an OpenAI-shaped client, that saves you a category of confusing failures.
+`drop_params: true` makes LiteLLM discard parameters a backend does not support instead of erroring. **It defaults to `False`, and for llama.cpp it is load-bearing rather than cosmetic.**
+
+The concrete case, from a production config: llama-server's `/v1/embeddings` rejects a null `encoding_format` — which LiteLLM sends by default — with `type must be string, but is null`. Without `drop_params`, every embedding request 400s and the error points at the wrong layer. This matters specifically for the RAG exercise.
+
+With small local models behind an OpenAI-shaped client, it removes a whole category of confusing failures. Turn it on.
 
 ---
 
@@ -258,15 +320,39 @@ litellm_settings:
 
 The most common "it's broken" that is not broken.
 
-A **cold** llama-swap load has to start an engine and read a model into memory. That takes seconds, sometimes tens of seconds on a slow disk. LiteLLM's default request timeout can expire first, and you get a timeout that looks like a crash.
+A **cold** llama-swap load has to start an engine and read a model into memory. That takes seconds, sometimes tens of seconds on a slow disk — and if the first request also has to *download* the weights, it can take minutes.
+
+**Correcting a common misconception:** LiteLLM's global `request_timeout` default is generous, not tight. In 1.82.6 it was verified at **6000 seconds** (`litellm/constants.py`: `float(os.getenv("REQUEST_TIMEOUT", 6000))`). Later versions refactored that constant, so the exact default now depends on your tag — which is the real argument for setting it yourself rather than relying on it.
+
+What actually bites is the **per-route** timeout, and the ordering between the three layers:
 
 ```yaml
+litellm_settings:
+  request_timeout: 900        # global ceiling — set it explicitly
+
   - model_name: local-chat
     litellm_params:
-      timeout: 600     # generous, and costs nothing when the model is warm
+      timeout: 600            # generous, and costs nothing when the model is warm
 ```
 
-Set it well above your worst-case cold load. The workshop config uses `600` for local routes and `120` for cloud ones.
+Order them so nothing gives up before the layer below it has finished:
+
+```
+per-route timeout  >  global request_timeout  >  llama-swap healthCheckTimeout
+```
+
+Get that backwards and LiteLLM times out mid-load — and because **each retry re-triggers a fresh load**, retrying makes it worse rather than better.
+
+Two notes from experience:
+
+- A per-route `timeout` inside `litellm_params` is **not documented** on the configs page (which points you at `router_settings.timeout` / `litellm_settings.request_timeout`). It works, because `litellm_params` forwards anything `litellm.completion()` accepts. Verified by working deployment, not by docs.
+- **For students, pre-warming beats tuning.** Send one throwaway request before the exercise starts and the cold load happens while nobody is waiting on it:
+
+```bash
+curl -s http://127.0.0.1:8090/v1/models >/dev/null
+curl -s http://127.0.0.1:8090/v1/chat/completions -H "Content-Type: application/json" \
+  -d '{"model":"chat","messages":[{"role":"user","content":"hi"}],"max_tokens":1}' >/dev/null
+```
 
 ---
 

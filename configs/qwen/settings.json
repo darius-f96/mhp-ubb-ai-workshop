@@ -1,15 +1,26 @@
 {
+  "$schema": "https://qwenlm.github.io/qwen-code/settings.json",
+
   "$comment": [
     "Qwen Code settings for the workshop. Copy to ~/.qwen/settings.json (user scope)",
-    "or to <project>/.qwen/settings.json (project scope, wins over user scope).",
+    "or to <project>/.qwen/settings.json (project scope).",
     "",
     "JSON has no comments, so notes live here and in docs/05-qwen-code.md.",
     "",
     "EDIT BEFORE USE:",
-    "  1. env.WORKSHOP_LITELLM_KEY  -> must match LITELLM_MASTER_KEY in configs/litellm/.env",
+    "  1. env.WORKSHOP_LITELLM_KEY      -> must match LITELLM_MASTER_KEY in configs/litellm/.env",
     "  2. generationConfig.contextWindowSize -> must match the -c you gave llama.cpp.",
-    "     Qwen Code otherwise GUESSES the context window from the model NAME, and a",
-    "     guess that is too large makes requests fail or silently truncate.",
+    "",
+    "TWO RULES THAT ARE EASY TO GET WRONG, both verified against the bundled docs:",
+    "",
+    "  * modelProviders merges by REPLACE, not by merge. A project-scope",
+    "    .qwen/settings.json containing modelProviders DISCARDS this whole catalogue.",
+    "    That is why this file belongs in USER scope (~/.qwen/settings.json).",
+    "",
+    "  * Provider entries are SEALED. Top-level model.generationConfig values --",
+    "    including contextWindowSize -- are IGNORED for models defined in",
+    "    modelProviders. Every setting must live inside the provider entry itself.",
+    "    samplingParams is also atomic: if you set it, put everything you want in it.",
     "",
     "Model ids below must match model_name entries in configs/litellm/config.yaml,",
     "which in turn must match ids your llama-swap exposes."
@@ -19,44 +30,70 @@
     "WORKSHOP_LITELLM_KEY": "sk-workshop-change-me"
   },
 
+  "security": {
+    "auth": {
+      "selectedType": "openai"
+    }
+  },
+
+  "model": {
+    "name": "local-chat"
+  },
+
   "modelProviders": {
     "openai": [
       {
         "id": "local-chat",
         "name": "local-chat — Qwen3-1.7B, self-hosted",
+        "description": "Workshop default. Small, CPU-only, honest about its limits.",
         "baseUrl": "http://127.0.0.1:4000/v1",
         "envKey": "WORKSHOP_LITELLM_KEY",
         "generationConfig": {
           "contextWindowSize": 8192,
-          "temperature": 0.2
+          "timeout": 300000,
+          "maxRetries": 1,
+          "samplingParams": {
+            "temperature": 0.2,
+            "max_tokens": 2048
+          }
         }
       },
       {
         "id": "local-coder",
         "name": "local-coder — Qwen2.5-Coder-1.5B, self-hosted",
+        "description": "Use this rather than local-chat for anything involving tools or MCP.",
         "baseUrl": "http://127.0.0.1:4000/v1",
         "envKey": "WORKSHOP_LITELLM_KEY",
         "generationConfig": {
           "contextWindowSize": 8192,
-          "temperature": 0.2
+          "timeout": 300000,
+          "maxRetries": 1,
+          "samplingParams": {
+            "temperature": 0.2,
+            "max_tokens": 2048
+          }
         }
       },
       {
         "id": "resilient",
         "name": "resilient — local first, cloud fallback",
+        "description": "Exercise 5. Survives llama-swap being stopped.",
         "baseUrl": "http://127.0.0.1:4000/v1",
         "envKey": "WORKSHOP_LITELLM_KEY",
         "generationConfig": {
-          "contextWindowSize": 8192
+          "contextWindowSize": 8192,
+          "timeout": 300000
         }
       },
       {
         "id": "cloud-fast",
         "name": "cloud-fast — use when the local model is not good enough",
+        "description": "Exercise 6 comparison. Needs a cloud key in configs/litellm/.env.",
         "baseUrl": "http://127.0.0.1:4000/v1",
         "envKey": "WORKSHOP_LITELLM_KEY",
         "generationConfig": {
-          "contextWindowSize": 128000
+          "contextWindowSize": 128000,
+          "timeout": 180000
         }
       }
     ]

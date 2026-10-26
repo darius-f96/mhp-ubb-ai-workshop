@@ -7,11 +7,16 @@ The honest numbers, verified 2026-10-26:
 | Fact | Value |
 |------|-------|
 | Current version | **0.32.0** (PyPI, requires Python `>=3.11,<3.15`) |
-| Docker image | `vllm/vllm-openai:v0.32.0` |
-| **Image size** | **10.31 GB** |
+| GPU Docker image | `vllm/vllm-openai:v0.32.0` |
+| **GPU image size** | **10.31 GB** |
 | Nightly image size | 9.7–12.5 GB |
-| CPU-only image tag | **does not exist** (`cpu` and `nightly-cpu` both 404) |
+| CPU Docker image | **`vllm/vllm-openai-cpu:v0.32.0`** — 1,236 MB, a *separate repository* |
+| CPU image variants | `:v0.32.0-x86_64` (1,719 MB), `:v0.32.0-arm64` (1,235 MB) |
+| Apple Silicon CPU image | **none** — source build only, FP32/FP16 (no BF16) |
 | Minimum sensible GPU VRAM | ~8 GB, and only for small models |
+| `--gpu-memory-utilization` default | **0.92** — vLLM assumes it owns the card |
+
+> The CPU image lives in its **own repository**, `vllm/vllm-openai-cpu` — not as a `:cpu` tag on `vllm/vllm-openai`. Looking for `vllm/vllm-openai:cpu` returns a 404 and leads people to wrongly conclude no CPU build exists.
 
 A 10 GB download on venue Wi-Fi, for software that wants a GPU you do not have. **Use llama.cpp.** That is not a compromise — for one user on a laptop it is the right tool.
 
@@ -90,18 +95,29 @@ Point LiteLLM at `:8000` instead of `:8090` and the rest of the workshop is iden
 | `--model` | HF repo id or a local path |
 | `--served-model-name` | The id clients ask for. Decouples the public name from the checkpoint |
 | `--max-model-len` | Context window, **per sequence** — unlike llama.cpp's `-c`, this is not divided by concurrency |
-| `--gpu-memory-utilization` | Fraction of VRAM to claim (0.0–1.0). Leaves room for the rest of your system |
+| `--gpu-memory-utilization` | Fraction of VRAM to claim. **Default is `0.92`** — verified in `vllm/config/cache.py` as `Field(default=0.92, gt=0, le=1)`. vLLM assumes it owns the card, so lower it if anything else needs VRAM |
 | `--max-num-seqs` | Concurrent sequences. Lower = better per-request latency; higher = better throughput |
 | `--enable-prefix-caching` | Reuse KV for repeated prompt prefixes. Big win for agentic workloads that resend the same context |
 | `--enable-chunked-prefill` | Interleave long prefills with decodes so one big prompt does not stall everyone |
 | `--max-num-batched-tokens` | Batch size cap per step |
-| `--enable-auto-tool-choice` | Required for tool calling |
-| `--tool-call-parser` | Which format the model emits (`hermes`, `qwen3_coder`, `llama3_json`, …) — must match the model |
+| `--enable-auto-tool-choice` | Required for tool calling. **Must be paired with `--tool-call-parser`** — see below |
+| `--tool-call-parser` | Which format the model emits (`hermes`, `qwen3_json`, `qwen3_coder`, `qwen3_xml`, `llama3_json`, …) — must match the model |
 | `--reasoning-parser` | Extracts chain-of-thought into `reasoning_content` |
 | `--kv-cache-dtype` | Quantise the KV cache (`auto`, `fp8`, …) |
 | `--quantization` | Force a quant method (`awq`, `gptq`, `fp8`, …) |
 | `--tensor-parallel-size` | Shard across N GPUs |
 | `--host` / `--port` | Bind address |
+
+### Two flag traps, both verified against v0.32.0 source
+
+**`--enable-auto-tool-choice` and `--tool-call-parser` are a pair.** Pass one alone and vLLM refuses to start:
+
+```python
+if args.enable_auto_tool_choice and not args.tool_call_parser:
+    raise TypeError("Error: --enable-auto-tool-choice requires --tool-call-parser")
+```
+
+**`--tool-call-parser qwen3` does not exist.** The registered Qwen names are **`qwen3_json`**, **`qwen3_coder`** and **`qwen3_xml`**. A bare `qwen3` — which older blog posts use — makes vLLM refuse to boot. There are ~54 registered parsers in total; check `vllm/tool_parsers/__init__.py` for the current list rather than guessing.
 
 ### VRAM guidance
 
@@ -126,17 +142,45 @@ vLLM has experimental Metal support, but it is not the well-trodden path. On a M
 
 ## The CPU question, answered honestly
 
-There is no CPU Docker image. You would install from source or via pip:
+**A first-party CPU image does exist and is properly maintained:** `vllm/vllm-openai-cpu:v0.32.0` — 1,236 MB, amd64 + arm64, roughly 470k pulls, with nightlies still being built. It is a real supported artifact, not a hack. (It is a **separate repository**, which is why `vllm/vllm-openai:cpu` 404s and people conclude no CPU build exists.)
+
+**It is still the wrong tool for your laptop.** Four reasons, in order of how much they will hurt you:
+
+**1. Apple Silicon students have no image at all.** It is experimental, source-build only, needs macOS Sonoma+ with XCode 15.4+, and supports **FP32/FP16 only — no BF16**. That is not a workshop exercise; it is an afternoon.
+
+**2. The architecture is the problem.** vLLM's entire value is PagedAttention, continuous batching and CUDA graphs — machinery that pays off when *many requests share a GPU*. With one student and one prompt you get all of the complexity and none of the throughput benefit.
+
+**3. CPU feature support depends on your instruction set.** From the official CPU docs:
+
+| Platform | Prebuilt image | Requirement |
+|----------|---------------|-------------|
+| Linux x86-64 | ✅ `:v0.32.0-x86_64` | `gcc/g++ >= 12.3.0`; **`avx512f` recommended**, `avx2` = *"Limited features"*. AMD needs Zen 4/Genoa+ for AVX512 |
+| Linux AArch64 | ✅ `:v0.32.0-arm64` | NEON required; **BF16 needs ARMv8.6-A+** (Graviton3/4, AmpereOne) |
+| Apple Silicon | ❌ none | Experimental; source build; FP32/FP16 only |
+| IBM Z (s390x) | ❌ none | Experimental; `gcc >= 14`, VXE, Z15+ |
+
+A large share of student laptops are `avx2`-only, which means the *"Limited features"* row.
+
+**4. It is slower than llama.cpp for the same model**, while using more memory and far more setup. llama.cpp has spent years optimising CPU kernels — AVX, NEON, quantised matmul.
+
+If you want to try it anyway on a Linux x86-64 box:
 
 ```bash
-pip install vllm          # Python >=3.11,<3.15
+docker run --rm \
+  --security-opt seccomp=unconfined --cap-add SYS_NICE --shm-size=4g \
+  -p 8000:8000 \
+  -v ~/.cache/huggingface:/root/.cache/huggingface \
+  -e VLLM_CPU_KVCACHE_SPACE=4 \
+  -e VLLM_CPU_OMP_THREADS_BIND="0-7" \
+  vllm/vllm-openai-cpu:v0.32.0-x86_64 \
+  Qwen/Qwen3-0.6B --served-model-name chat --dtype bfloat16 --max-model-len 4096
 ```
 
-CPU support is documented at <https://docs.vllm.ai/en/latest/getting_started/installation/cpu/index.html>, and it typically means building from source with specific flags.
+Two flags there are **required, not optional**: `--security-opt seccomp=unconfined --cap-add SYS_NICE`. Docker's default seccomp profile blocks `get_mempolicy` and `migrate_pages`, which **silently disables NUMA memory binding** — you get a working server that is mysteriously slow. `VLLM_CPU_KVCACHE_SPACE` is in GiB and must fit inside your 16 GB *after* weights.
 
-**It will run. It will not be pleasant.** vLLM's entire design assumes a GPU with fast parallel matrix math and lots of memory bandwidth. On a CPU you pay the 10 GB install, a long build, and a large Python dependency tree — and then get *worse* performance than llama.cpp, which has spent years optimising CPU kernels (AVX, NEON, quantised matmul).
+**The honest line:** *vLLM is a GPU serving engine. There is a genuinely supported CPU build, and on a laptop it will be slower than llama.cpp for the same model while using more memory and more setup. We use llama.cpp on CPU. We use vLLM when there is an NVIDIA GPU.*
 
-If you are on a CPU: **llama.cpp, full stop.** There is no scenario in this workshop where CPU vLLM is the better choice.
+> I have no measured CPU tok/s figure for vLLM and will not invent one — the official CPU page makes no CPU-vs-GPU performance claim. If you want a defensible number for the slides, benchmark `vllm-openai-cpu` against `llama-server` on the same model and the same machine.
 
 ---
 

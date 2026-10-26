@@ -15,16 +15,18 @@ Record your answers in `answers.md` (copy `answers-template.md`). At the end you
 Before you choose a model, measure what your laptop can actually do.
 
 ```bash
-llama-bench -m ~/models/Qwen3-1.7B-Q4_K_M.gguf -ngl 0 -p 512 -n 128
+llama-bench -m ~/models/Qwen3-1.7B-Q4_K_M.gguf -ngl 0 -t 4 -p 512 -n 128
 ```
 
-`-ngl 0` forces CPU (no GPU layers). `pp512` is prefill speed — how fast it digests your prompt. `tg128` is decode speed — how fast it writes the answer.
+`-ngl 0` forces CPU (no GPU layers). `-t 4` sets threads. `pp512` is prefill speed — how fast it digests your prompt. `tg128` is decode speed — how fast it writes the answer.
+
+> **Always pass `-t` and `-ngl` explicitly.** `llama-bench` defaults to `-t 20` threads and `-ngl -1` (offload everything). Twenty threads on a laptop produces noise, not a measurement, and `-ngl -1` will use a GPU you may not want in the number. Try `-t 2`, `-t 4` and `-t 8` and see where yours peaks — it is usually your *physical* core count, not your logical one.
 
 Now the same for a bigger and a smaller model:
 
 ```bash
-llama-bench -m ~/models/Qwen3-0.6B-Q4_0.gguf       -ngl 0 -p 512 -n 128
-llama-bench -m ~/models/Qwen3-4B-Q4_K_M.gguf       -ngl 0 -p 512 -n 128
+llama-bench -m ~/models/Qwen3-0.6B-Q4_0.gguf       -ngl 0 -t 4 -p 512 -n 128
+llama-bench -m ~/models/Qwen3-4B-Q4_K_M.gguf       -ngl 0 -t 4 -p 512 -n 128
 ```
 
 If you have an Apple Silicon Mac, run the 1.7B again **without** `-ngl 0` and compare. That gap is Metal doing the work instead of your CPU.

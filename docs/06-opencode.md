@@ -12,9 +12,9 @@ By the end of this page OpenCode will be using the exact same llama.cpp → llam
 
 A terminal coding agent, provider-agnostic by design. It does not favour one vendor's models; it treats every provider as configuration.
 
-Current version: **1.19.4** on npm and GitHub Releases (published 2026-10-22).
+Current version: **1.19.4** on npm and GitHub Releases (published 2026-10-22). This guide documents the **OpenCode 1** line.
 
-> **Versions differ by install channel.** Homebrew currently builds **2.1.4** from a source tag, while npm and GitHub Releases are at **1.19.4**. That is not a typo and not something you did wrong — the channels are out of step. Treat `opencode --version` as the only authority for what *you* have.
+> **Two major versions are in circulation right now.** npm `opencode-ai` is at **1.19.4** (V1); Homebrew's core `opencode` formula is at **2.1.4** (V2). See [the Homebrew section below](#homebrew--read-this-carefully-there-are-two-versions) — this matters more than any other detail on this page, because they cannot be installed side by side. Treat `opencode --version` as the only authority for what *you* have.
 
 > **Package-name warning:** the npm package is **`opencode-ai`**. `@opencode-ai/opencode` does **not** exist — it returns a 404. Easy mistake, confusing error.
 
@@ -38,19 +38,27 @@ npm install -g opencode-ai
 opencode --version
 ```
 
-### Homebrew (macOS / Linux)
-
-It is in homebrew-core — no tap needed:
+### Homebrew — read this carefully, there are two versions
 
 ```bash
-brew install opencode
+brew install anomalyco/tap/opencode    # ← OpenCode 1 (the 1.19.x line this guide documents)
+brew install opencode                  # ← OpenCode 2 (homebrew-core, currently 2.1.4)
 ```
 
-<details>
-<summary>Why <code>brew install sst/tap/opencode</code> no longer works</summary>
+**These are different major versions of the software, not mirrors of each other.** Verbatim from the official docs: *"Use the OpenCode tap above for V1. Homebrew's `brew install opencode` formula currently installs V2."*
 
-Older guides point at the `sst` tap. That tap's formula is gone (404) now that the project moved to `anomalyco`, and OpenCode is packaged in homebrew-core as plain `opencode`. Use the core formula.
-</details>
+Arch has the same split:
+
+```bash
+sudo pacman -S opencode     # OpenCode 2
+paru -S opencode-bin        # OpenCode 1 (AUR)
+```
+
+> **They cannot coexist.** From the docs: *"OpenCode 1 and OpenCode 2 both use the `opencode` command and cannot be installed side by side under their default command."* So pick one deliberately — if you install both, whichever won the PATH is what you get, and the config behaviour may not match the guide you are reading.
+>
+> **This guide documents OpenCode 1** (1.19.x). Everything here was verified against that line. Some features are marked "OpenCode 2 only" upstream (e.g. `experimental.policies`), and whether the `provider` / `mcp` / `agent` config shapes are unchanged in V2 is something I have **not** verified. If you install V2, check <https://opencode.ai/docs> for its own config reference before trusting the JSON below.
+>
+> `opencode upgrade --major` moves you from V1 to V2 and removes V1.
 
 ### Pre-built binaries
 
@@ -99,6 +107,12 @@ mkdir -p ~/.config/opencode
 $EDITOR ~/.config/opencode/opencode.json
 ```
 
+Either filename works: `opencode.json`, or **`opencode.jsonc`** if you want to write comments in it — which, for a config you are learning, is genuinely useful.
+
+> **Merging, and a contrast worth internalising.** Verbatim from the docs: *"Configuration files are **merged together**, not replaced… Later configs override earlier ones only for conflicting keys. Non-conflicting settings from all configs are preserved."*
+>
+> That is the **opposite** of Qwen Code, whose `modelProviders` block is **REPLACE** — a project file there throws away your whole user catalogue. If you use both tools, this single difference is the most likely thing to burn you. See [chapter 5](05-qwen-code.md#the-context-window-trap).
+
 ### The config
 
 ```json
@@ -113,15 +127,29 @@ $EDITOR ~/.config/opencode/opencode.json
         "apiKey": "{env:LITELLM_API_KEY}"
       },
       "models": {
-        "local-chat":  { "name": "Qwen3-1.7B (local)" },
-        "local-coder": { "name": "Qwen2.5-Coder-1.5B (local)" },
-        "resilient":   { "name": "Local with cloud fallback" },
-        "cloud-fast":  { "name": "Cloud (OpenRouter)" }
+        "local-chat": {
+          "name": "Qwen3-1.7B (local)",
+          "limit": { "context": 8192, "output": 2048 }
+        },
+        "local-coder": {
+          "name": "Qwen2.5-Coder-1.5B (local)",
+          "limit": { "context": 8192, "output": 2048 }
+        },
+        "resilient": {
+          "name": "Local with cloud fallback",
+          "limit": { "context": 8192, "output": 2048 }
+        },
+        "cloud-fast": { "name": "Cloud (OpenRouter)" }
       }
     }
-  }
+  },
+  "model": "local/local-chat"
 }
 ```
+
+> **`limit` matters more than it looks.** For the 75+ built-in providers, OpenCode fills context and output limits in automatically from [models.dev](https://models.dev). It knows **nothing** about your local model, so if you omit `limit` it simply does not know — and will happily build a request your llama.cpp `-c 8192` server has to reject. Set it, and set it to what your *server* actually accepts (remember `-np` divides `-c`; see [chapter 2](02-llama-cpp.md#the-context--parallel-trap)). This is the OpenCode counterpart to Qwen Code's `contextWindowSize`, with one important difference in how it fails: **OpenCode omits quietly, Qwen Code guesses loudly.** Neither is worse, but they need different habits.
+>
+> `cloud-fast` deliberately has no `limit` — it is a built-in-catalogue model, so models.dev supplies it.
 
 Field by field:
 

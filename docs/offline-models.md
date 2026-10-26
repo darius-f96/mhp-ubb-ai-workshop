@@ -152,9 +152,11 @@ Two things besides weights normally want the network:
 **Docker images.** Pull them *before* the workshop, not during:
 
 ```bash
-docker pull ghcr.io/berriai/litellm:main-stable
+docker pull ghcr.io/berriai/litellm:v1.106.4
 docker images | grep litellm
 ```
+
+Use the same pinned tag as `configs/litellm/docker-compose.yml` — see [chapter 4](04-litellm.md) for why `main-latest` is the wrong choice despite its name.
 
 **npm packages.** Same story:
 

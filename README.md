@@ -178,7 +178,7 @@ This repo covers the self-hosting block. A full-day shape that has worked:
 
 - [ ] Download the full model set on your machine: `./scripts/download-models.sh --all` (~16 GB)
 - [ ] Test `./scripts/serve-mirror.sh` and note the IP you will announce
-- [ ] Pre-pull the Docker image so the room is not all pulling at once: `docker pull ghcr.io/berriai/litellm:main-stable`
+- [ ] Pre-pull the Docker image so the room is not all pulling at once: `docker pull ghcr.io/berriai/litellm:v1.106.4` (match the pin in `configs/litellm/docker-compose.yml`; do **not** use `main-latest`, which is currently the stale one)
 - [ ] Ask the venue about **client isolation** on guest Wi-Fi — it silently breaks the LAN mirror. Get on the same SSID as the students or bring a travel router.
 - [ ] Have a cloud API key ready (OpenRouter or Gemini free tier) for the fallback demo, and for students whose laptops cannot cope
 - [ ] Bring USB sticks with the `core` model set as a last resort
