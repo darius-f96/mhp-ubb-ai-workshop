@@ -13,7 +13,7 @@ If you want to stop reading and just get going, download these three and you can
 ```bash
 mkdir -p ~/models && cd ~/models
 
-# 1. The workhorse: small, fast, genuinely useful on CPU      (2.50 GB)
+# 1. The workhorse: small, fast, genuinely useful on CPU      (1.28 GB)
 hf download ggml-org/Qwen3-1.7B-GGUF Qwen3-1.7B-Q4_K_M.gguf --local-dir .
 
 # 2. A code specialist                                          (1.12 GB)
@@ -23,7 +23,7 @@ hf download Qwen/Qwen2.5-Coder-1.5B-Instruct-GGUF qwen2.5-coder-1.5b-instruct-q4
 hf download nomic-ai/nomic-embed-text-v1.5-GGUF nomic-embed-text-v1.5.Q8_0.gguf --local-dir .
 ```
 
-Total: **3.77 GB**. If your disk or the venue Wi-Fi is tight, do just #1 — it is enough for most of the day.
+Total: **2.55 GB**. If your disk or the venue Wi-Fi is tight, do just #1 — it is enough for most of the day.
 
 > No `hf` command? Install it with `pip install -U huggingface_hub`, or use [the download script](../scripts/download-models.sh) which falls back to plain `curl`.
 
@@ -183,7 +183,7 @@ Vision on CPU is slow — expect 10–30 seconds per image. Fine for a demo, not
 |-------|---------|------|------|
 | SmolLM2 135M | `unsloth/SmolLM2-135M-Instruct-GGUF` | `SmolLM2-135M-Instruct-Q4_K_M.gguf` | **0.11 GB** |
 
-Download this one. It is 135 million parameters — roughly 30× smaller than the workhorse. Ask it the same question you asked Qwen3-1.7B and compare. This is the single most instructive five minutes of the workshop: it makes the relationship between scale, quantisation and capability something you have *seen* rather than been told.
+Download this one. It is 135 million parameters — roughly 13× smaller than the workhorse. Ask it the same question you asked Qwen3-1.7B and compare. This is the single most instructive five minutes of the workshop: it makes the relationship between scale, quantisation and capability something you have *seen* rather than been told.
 
 Also useful for load-testing: it starts instantly and uses no RAM, so you can verify your whole llama-swap → LiteLLM → agent chain end to end without waiting.
 

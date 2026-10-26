@@ -14,10 +14,12 @@ Tick these off. Each one has a verify command — if the verify command works, y
 |---|------|-----------------|-------------|
 | 1 | A terminal you are comfortable in | Every tool in this workshop is a CLI | `echo $SHELL` |
 | 2 | Git | You clone this repo and push your exercises | `git --version` |
-| 3 | Docker | LiteLLM and vLLM run in containers | `docker run --rm hello-world` |
-| 4 | Node.js ≥ 20 | Qwen Code and OpenCode are Node CLIs | `node --version` |
-| 5 | An editor | VS Code or IntelliJ | open one |
-| 6 | ~10 GB free disk | Model weights are the big item | see below |
+| 3 | Docker | LiteLLM runs in a container | `docker run --rm hello-world` |
+| 4 | Node.js ≥ 22 | Qwen Code and OpenCode are Node CLIs | `node --version` |
+| 5 | **llama.cpp** | The inference engine. The hands-on cannot start without it | `llama-server --version` |
+| 6 | **llama-swap** | Puts several models behind one port | `llama-swap --version` |
+| 7 | An editor | VS Code or IntelliJ | open one |
+| 8 | ~10 GB free disk | Model weights are the big item | see below |
 
 ---
 
@@ -222,7 +224,82 @@ npm --version
 
 ---
 
-## 5. An editor
+## 5. llama.cpp
+
+This is the inference engine — the layer that does the actual matrix multiplication. **The hands-on block cannot start without it**, and building from source in a room of thirty people is how a 45-minute session becomes a two-hour one. Do it at home.
+
+**macOS (Homebrew):**
+
+```bash
+brew install llama.cpp
+llama-server --version
+```
+
+Apple Silicon gets Metal support in this build, so models offload to the GPU automatically.
+
+**Ubuntu / WSL2 — build from source** (there is no good apt package):
+
+```bash
+sudo apt update && sudo apt install -y build-essential cmake git
+cd ~                                    # ← build in HOME, not inside the workshop repo
+git clone https://github.com/ggml-org/llama.cpp
+cd llama.cpp
+cmake -B build
+cmake --build build --config Release -j"$(nproc)"
+```
+
+A few minutes. Then put the binaries on your PATH:
+
+```bash
+echo 'export PATH="$HOME/llama.cpp/build/bin:$PATH"' >> ~/.bashrc
+source ~/.bashrc
+```
+
+> **Build it in `~`, not inside `mhp-ubb-ai-workshop/`.** Cloning it into the workshop repo nests a second Git repository inside the one you commit your exercises to, and your `git status` will be noise for the rest of the day.
+
+**Verify (all platforms):**
+
+```bash
+llama-server --version
+```
+
+You should see a build number, for example `version: 9761 (721354fbd)`. Write it down — behaviour differs between builds and instructors will ask. Full install paths for other platforms, plus the flag reference: [02-llama-cpp.md](02-llama-cpp.md).
+
+---
+
+## 6. llama-swap
+
+One Go binary that puts several models behind one port. You need it for the second half of the hands-on.
+
+**macOS / Linux (Homebrew):**
+
+```bash
+brew tap mostlygeek/llama-swap
+brew install llama-swap
+```
+
+**Any OS — pre-built binary** (~24 MB, no build step):
+
+```bash
+curl -L -o /tmp/llama-swap.tar.gz \
+  https://github.com/mostlygeek/llama-swap/releases/download/v267/llama-swap_267_linux_amd64.tar.gz
+tar xzf /tmp/llama-swap.tar.gz -C /tmp
+sudo mv /tmp/llama-swap /usr/local/bin/
+```
+
+macOS Apple Silicon uses `darwin_arm64`, macOS Intel `darwin_amd64`, Windows `windows_amd64.zip`. The full asset table is in [03-llama-swap.md](03-llama-swap.md#install).
+
+**Verify:**
+
+```bash
+llama-swap --version
+```
+
+> llama-swap ships releases weekly, so do not worry about having the newest. Anything **v252 or newer** supports `--validate`, which the workshop uses.
+
+---
+
+## 7. An editor
 
 **VS Code** (recommended) — <https://code.visualstudio.com/>. Then, so you can edit files inside WSL2 or a remote box:
 
@@ -239,7 +316,7 @@ Either is fine. You mostly need to edit YAML and JSON without a fight, so instal
 
 ---
 
-## 6. Disk space
+## 8. Disk space
 
 ```bash
 df -h .
@@ -251,7 +328,7 @@ You want **10 GB free** in your home directory. Model weights dominate:
 |------|------|
 | Docker images (LiteLLM) | ~1.5 GB |
 | llama.cpp build or binary | ~100 MB |
-| The workshop model set | ~2 GB |
+| The workshop model set (core) | ~2.6 GB |
 | Headroom for experiments | ~3 GB |
 
 See [models.md](models.md) for exactly what to download and how big each file is.

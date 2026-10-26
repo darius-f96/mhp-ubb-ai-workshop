@@ -842,7 +842,7 @@ top-k chunks + query ─> chat model ─> answer  (with citations)</div>
   <div class="body">
     <table>
       <tr><th>#</th><th>Do</th><th>You end up with</th></tr>
-      <tr><td>1</td><td><code>scripts/download-models.sh</code></td><td>3.8 GB of weights, verified</td></tr>
+      <tr><td>1</td><td><code>scripts/download-models.sh</code></td><td>2.6 GB of weights, verified</td></tr>
       <tr><td>2</td><td><code>llama-server -m … -c 8192 -np 1</code></td><td>A model on <code>:8080</code></td></tr>
       <tr><td>3</td><td><code>llama-bench -ngl 0 -t 4</code></td><td>Your real numbers, not guesses</td></tr>
       <tr><td>4</td><td><code>llama-swap --config …</code></td><td>Four models, one port</td></tr>

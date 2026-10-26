@@ -38,6 +38,21 @@ need() { # name, min_version_major, hint
   return 0
 }
 
+# A tool whose --version output is not a plain X.Y number (llama.cpp prints a
+# build id, llama-swap a vNNN tag), so print the first line verbatim instead.
+# sev=bad blocks the session; sev=note only warns.
+have_bin() { # name, sev, hint
+  local cmd="$1" sev="$2" hint="$3" v
+  if command -v "$cmd" >/dev/null 2>&1; then
+    v="$("$cmd" --version 2>&1 | head -1)"
+    pass "$cmd — ${v:-installed}"
+  elif [ "$sev" = "bad" ]; then
+    bad "$cmd not found — $hint"
+  else
+    note "$cmd not found — $hint"
+  fi
+}
+
 echo "${bold}AI Workshop — machine check${off}"
 echo "Host: $(uname -srmo 2>/dev/null || uname -a)"
 
@@ -117,6 +132,17 @@ if command -v docker >/dev/null 2>&1; then
 else
   bad "docker not found — see docs/00-prerequisites.md#3-docker"
 fi
+
+# ── Workshop binaries ────────────────────────────────────────────────────────
+# These are the ones that cost real session time if missing: llama.cpp has to be
+# COMPILED on Ubuntu/WSL2, and there is no slot for that in the 45-minute
+# hands-on. The two agents are only needed later (Exercise 6), so a miss there is
+# a warning you can fix over lunch rather than a blocker.
+head_ "Workshop binaries"
+have_bin llama-server bad  "the inference engine; the hands-on cannot start without it. Install NOW: docs/00-prerequisites.md#5-llamacpp"
+have_bin llama-swap   bad  "the model manager; needed for the second half. Install NOW: docs/00-prerequisites.md#6-llama-swap"
+have_bin qwen         note "needed for Exercise 6, not the hands-on. npm i -g @qwen-code/qwen-code (Node >= 22): docs/05-qwen-code.md"
+have_bin opencode     note "needed for Exercise 6, not the hands-on. npm i -g opencode-ai: docs/06-opencode.md"
 
 # ── Hardware ─────────────────────────────────────────────────────────────────
 head_ "Hardware"

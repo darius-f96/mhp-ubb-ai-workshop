@@ -33,7 +33,7 @@ Do all of this the day before, on the venue network if you can get access. Nothi
 
 ### Your machine
 
-- [ ] `./scripts/download-models.sh --all` — the full set, ~16 GB. Takes a while; start it early.
+- [ ] `./scripts/download-models.sh --all` — the full set, ~14 GB. Takes a while; start it early.
 - [ ] `docker pull ghcr.io/berriai/litellm:v1.106.4` — so the room is not all pulling at once. **Use the pinned tag from `configs/litellm/docker-compose.yml`, not `main-latest`** — `main-latest` is currently the *stale* one, and the old `main-v…-stable` family stopped being published at v1.83
 - [ ] Walk the entire student path yourself, on a clean user account if possible. You will find the thing that breaks.
 - [ ] `./scripts/bootstrap.sh` — fix everything it flags
@@ -49,7 +49,7 @@ Do all of this the day before, on the venue network if you can get access. Nothi
 ### Fallbacks
 
 - [ ] A cloud API key (OpenRouter or Gemini free tier) in `configs/litellm/.env`. Needed for the resilience demo, and as a lifeboat for students whose laptops cannot cope.
-- [ ] USB sticks with the `core` model set (3.8 GB each). Last resort when the network is unusable.
+- [ ] USB sticks with the `core` model set (2.6 GB each). Last resort when the network is unusable.
 - [ ] Know which students have 8 GB of RAM **before** the session starts. They will not keep up, and finding out at minute 30 wastes their afternoon.
 
 ---
@@ -94,7 +94,7 @@ Note that bootstrap reports **occupied ports as a warning, not a failure** — d
 ### 0:05 — Download (8 min)
 
 ```bash
-./scripts/download-models.sh                                    # core set, 3.8 GB
+./scripts/download-models.sh                                    # core set, 2.6 GB
 MIRROR=http://YOUR-IP:8000 ./scripts/download-models.sh         # if using the mirror
 ```
 
@@ -187,8 +187,11 @@ cp .env.example .env
 nano .env                    # set LITELLM_MASTER_KEY; cloud key optional
 docker compose up -d
 cd ../..
+set -a; . configs/litellm/.env; set +a     # ← load the key into THEIR shells too
 ./scripts/healthcheck.sh
 ```
+
+**Say the `set -a` line out loud and put it on the slide.** `env_file:` feeds the *container*; the student's terminal never sees it. Every curl in this block and in Exercise 5 sends `$LITELLM_API_KEY`, so if it is unset they get a `401` from a healthy gateway, `healthcheck.sh` reports the gateway as broken, and they conclude LiteLLM is down — during the one demo you cannot afford to lose.
 
 **The demo:** kill llama-swap (`Ctrl-C` in its terminal), then:
 

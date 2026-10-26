@@ -5,8 +5,8 @@
 # CLI (resumable), and plain curl. Whichever works first wins.
 #
 # Usage:
-#   ./download-models.sh              # the core set (~3.8 GB)
-#   ./download-models.sh --all        # everything in the catalogue (~16 GB)
+#   ./download-models.sh              # the core set (~2.6 GB)
+#   ./download-models.sh --all        # everything in the catalogue (~14 GB)
 #   ./download-models.sh --list       # show what each tier contains
 #   MIRROR=http://192.168.1.50:8000 ./download-models.sh   # force a mirror
 #
@@ -33,7 +33,7 @@ esac
 # Sizes verified against the Hugging Face API on 2026-10-26.
 # ─────────────────────────────────────────────────────────────────────────────
 CATALOGUE=(
-  # core — enough for every exercise in the workshop (3.77 GB)
+  # core — enough for every exercise in the workshop (2.55 GB)
   "ggml-org/Qwen3-1.7B-GGUF|Qwen3-1.7B-Q4_K_M.gguf|core"
   "Qwen/Qwen2.5-Coder-1.5B-Instruct-GGUF|qwen2.5-coder-1.5b-instruct-q4_k_m.gguf|core"
   "nomic-ai/nomic-embed-text-v1.5-GGUF|nomic-embed-text-v1.5.Q8_0.gguf|core"
@@ -112,8 +112,14 @@ fetch_one() {
   echo "== $repo/$file"
   case "$transport" in
     mirror)
-      url="$MIRROR/$repo/$file"
-      curl -L --fail --retry 3 --progress-bar -o "$dest" "$url" || return 1
+      # The mirror serves $MODEL_DIR as its document root. This script FLATTENS
+      # what it downloads (see the hf branch below), so a cache built by running
+      # download-models.sh holds <file>.gguf at the top level — while a mirror
+      # assembled by hand may follow <org>/<repo>/<file>.gguf. Try nested first,
+      # then flat, so either layout works.
+      curl -L --fail --retry 3 --progress-bar -o "$dest" "$MIRROR/$repo/$file" \
+        || curl -L --fail --retry 3 --progress-bar -o "$dest" "$MIRROR/$file" \
+        || return 1
       ;;
     hf)
       hf download "$repo" "$file" --local-dir "$MODEL_DIR" || return 1

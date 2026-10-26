@@ -58,9 +58,14 @@ chat() { # base_url model
   fi
 }
 
-models_at() { # base_url
-  local body
-  body="$(get "$1/v1/models" 10)"
+models_at() { # base_url [auth]
+  local body auth=()
+  # Pass "auth" for the gateway layer. Once LiteLLM has a master_key it enforces
+  # it on EVERY key-bearing endpoint, /v1/models included — so an unauthenticated
+  # probe 401s against a perfectly healthy proxy and this script used to report
+  # that as "did not respond". llama.cpp and llama-swap need no header.
+  [ "${2:-}" = "auth" ] && [ -n "$PROXY_KEY" ] && auth=(-H "Authorization: Bearer $PROXY_KEY")
+  body="$(curl -s --max-time 10 "${auth[@]}" "$1/v1/models" 2>/dev/null)"
   [ -z "$body" ] && { echo ""; return 1; }
   if command -v jq >/dev/null 2>&1; then
     echo "$body" | jq -r '.data[]?.id' 2>/dev/null | tr '\n' ' '
@@ -144,7 +149,7 @@ if listening "$PROXY_PORT"; then
   live="$(curl -s --max-time 8 "${hdr[@]}" "http://127.0.0.1:$PROXY_PORT/health/liveliness" 2>/dev/null)"
   [ -n "$live" ] && pass "/health/liveliness: ${live:0:40}" || note "/health/liveliness did not respond (may need auth)"
 
-  m="$(models_at "http://127.0.0.1:$PROXY_PORT")"
+  m="$(models_at "http://127.0.0.1:$PROXY_PORT" auth)"
   if [ -n "$m" ]; then
     pass "/v1/models responds"
     info "$m"
@@ -162,9 +167,23 @@ if listening "$PROXY_PORT"; then
       info "then: docker logs litellm --tail 40"
     fi
   else
-    bad "port open but /v1/models did not respond."
-    [ -z "$PROXY_KEY" ] && info "if you set LITELLM_MASTER_KEY, re-run with: LITELLM_API_KEY=YOURKEY ./scripts/healthcheck.sh"
-    info "docker logs litellm --tail 40"
+    code="$(curl -s -o /dev/null -w '%{http_code}' --max-time 8 "${hdr[@]}" \
+      "http://127.0.0.1:$PROXY_PORT/v1/models" 2>/dev/null)"
+    if [ "$code" = "401" ]; then
+      bad "/v1/models returned 401. The gateway is UP and enforcing auth — the key did not match."
+      if [ -z "$PROXY_KEY" ]; then
+        info "LITELLM_API_KEY is not set in THIS shell. configs/litellm/.env is read by the"
+        info "container, not by your terminal, so setting it there does nothing here. Load it:"
+        info "  set -a; . configs/litellm/.env; set +a"
+        info "then re-run this script."
+      else
+        info "the key you sent was rejected. It must equal LITELLM_MASTER_KEY in"
+        info "configs/litellm/.env exactly, including the sk- prefix."
+      fi
+    else
+      bad "port open but /v1/models did not respond${code:+ (HTTP $code)}."
+      info "docker logs litellm --tail 40"
+    fi
   fi
 else
   note "nothing on :$PROXY_PORT — LiteLLM not running. cd configs/litellm && docker compose up -d"

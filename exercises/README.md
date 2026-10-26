@@ -196,14 +196,21 @@ curl -s http://127.0.0.1:8090/running | jq
 Bring up LiteLLM with [`configs/litellm/`](../configs/litellm/):
 
 ```bash
-cd configs/litellm && docker compose up -d && cd ../..
+cd configs/litellm && cp .env.example .env && docker compose up -d && cd ../..
+
+# Load the key into THIS shell. `.env` is read by the CONTAINER, not by your
+# terminal — skip this and every curl below 401s against a healthy gateway.
+set -a; . configs/litellm/.env; set +a
+echo "$LITELLM_API_KEY"        # must print your key, not an empty line
+
 ./scripts/healthcheck.sh
 ```
 
 Confirm the proxy sees your local models:
 
 ```bash
-curl -s http://127.0.0.1:4000/v1/models | jq -r '.data[].id'
+curl -s http://127.0.0.1:4000/v1/models \
+  -H "Authorization: Bearer $LITELLM_API_KEY" | jq -r '.data[].id'
 ```
 
 Talk to the local model *through* the proxy:
@@ -275,6 +282,19 @@ Watch what it does. Then ask it something requiring real reasoning:
 
 ## Handing in
 
+You cloned **our** repository, so its `origin` is read-only for you — pushing to it fails with a 403. You need your own copy on GitHub first.
+
+**1 · Fork, once, in the browser.** Open <https://github.com/darius-f96/mhp-ubb-ai-workshop> and click **Fork** (top right). That creates `github.com/YOUR-USERNAME/mhp-ubb-ai-workshop` under your account, which you *can* push to.
+
+**2 · Add your fork as a second remote.** Keeping `origin` pointed at upstream means you can still pull corrections during the day:
+
+```bash
+git remote add mine https://github.com/YOUR-USERNAME/mhp-ubb-ai-workshop.git
+git remote -v        # verify: origin = darius-f96, mine = YOUR-USERNAME
+```
+
+**3 · Work on a branch, commit, push to your fork:**
+
 ```bash
 cp answers-template.md answers.md
 # ... fill it in ...
@@ -282,10 +302,12 @@ cp answers-template.md answers.md
 git checkout -b workshop-YOURNAME
 git add answers.md
 git commit -m "AI workshop exercises"
-git push -u origin workshop-YOURNAME
+git push -u mine workshop-YOURNAME
 ```
 
-Then open a pull request against your own fork, and share the link.
+**4 · Open the pull request** on your own fork — GitHub usually offers a "Compare & pull request" banner straight after the push. Base it on *your* `main`, compare `workshop-YOURNAME`, then share the link with an instructor.
+
+> `git add answers.md` names one file deliberately. If you built llama.cpp or downloaded models inside this directory, a bare `git add .` would try to commit gigabytes of weights and a nested repository. Check `git status` before you commit — that habit is worth more than the exercise.
 
 ---
 

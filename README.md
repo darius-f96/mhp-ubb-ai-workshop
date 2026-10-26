@@ -20,7 +20,7 @@ You need:
 - [ ] A terminal you are comfortable in — **Windows users: WSL2, not PowerShell**
 - [ ] Git
 - [ ] Docker, with at least 6 GB allocated to it
-- [ ] Node.js ≥ 20
+- [ ] Node.js ≥ 22
 - [ ] VS Code or IntelliJ
 - [ ] ~10 GB free disk
 
@@ -42,7 +42,7 @@ Work through these in order. Each one ends with something running that you can c
 |---|-------|----------------------|
 | 0 | [Prerequisites](docs/00-prerequisites.md) | A machine that is ready |
 | 1 | [What you are actually building](docs/01-concepts.md) | The mental model — read this even if you skip everything else |
-| — | [Models: what to download](docs/models.md) | 3.8 GB of weights, chosen for a 16 GB laptop |
+| — | [Models: what to download](docs/models.md) | 2.6 GB of weights, chosen for a 16 GB laptop |
 | 2 | [llama.cpp](docs/02-llama-cpp.md) | A model serving HTTP on `:8080` |
 | 3 | [llama-swap](docs/03-llama-swap.md) | Several models, one port, loaded on demand |
 | 4 | [LiteLLM](docs/04-litellm.md) | One gateway on `:4000`, with cloud fallback |

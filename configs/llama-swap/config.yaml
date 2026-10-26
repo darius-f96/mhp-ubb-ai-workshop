@@ -5,9 +5,10 @@
 # the first. That is the whole idea, and it is what makes several specialists
 # practical on a 16 GB laptop.
 #
-# ─── BEFORE YOU RUN THIS, EDIT TWO MACROS BELOW ───────────────────────────────
+# ─── BEFORE YOU RUN THIS, EDIT THREE MACROS BELOW ─────────────────────────────
 #   model-dir          where your .gguf files live
 #   llama-server-path  where the llama.cpp server binary is
+#   ngl                0 for CPU (the workshop baseline), 999 if you have a GPU
 # Everything else works as-is.
 #
 # Run it in the foreground so you can read the log (do this during the workshop):
@@ -77,6 +78,12 @@ models:
       ${common-args}
       -ngl ${ngl}
       -c 8192
+      -np 1
+    # -np 1 = ONE server slot. The default is "auto", which picks 4 — and if you
+    # then set -np yourself, -c is DIVIDED by it (-c 8192 -np 4 gives each request
+    # only 2048). You are one person; four idle slots cost RAM and context for
+    # nothing. See docs/02-llama-cpp.md#the-context--parallel-trap.
+    #
     # Unload after 10 minutes idle. On a laptop you want RAM back.
     ttl: 600
 
@@ -89,6 +96,7 @@ models:
       ${common-args}
       -ngl ${ngl}
       -c 8192
+      -np 1
       --reasoning-budget 0
     ttl: 600
 
@@ -102,6 +110,7 @@ models:
       ${common-args}
       -ngl ${ngl}
       -c 2048
+      -np 1
       --embedding
     ttl: 600
 
@@ -120,6 +129,7 @@ models:
       ${common-args}
       -ngl ${ngl}
       -c 4096
+      -np 1
     ttl: 300
 
 # ── Groups (optional) ─────────────────────────────────────────────────────────

@@ -13,9 +13,12 @@
 # Clients then run:
 #   MIRROR=http://YOUR-IP:8000 ./scripts/download-models.sh
 #
-# Directory layout expected (what download-models.sh produces, mirrored per repo):
-#   $MODEL_DIR/<org>/<repo>/<file>.gguf      preferred
-#   $MODEL_DIR/<file>.gguf                   also works, see "flat" note below
+# Directory layout: download-models.sh FLATTENS what it downloads, so a cache it
+# built holds $MODEL_DIR/<file>.gguf. A mirror assembled by hand may instead use
+# $MODEL_DIR/<org>/<repo>/<file>.gguf. Both work — download-models.sh tries the
+# nested path first and falls back to the flat one. The pre-flight below reports
+# which shape your directory actually serves, so a layout mismatch is caught
+# here rather than by a room full of students at once.
 
 set -euo pipefail
 
@@ -54,6 +57,53 @@ if [ "$COUNT" -eq 0 ]; then
   echo "   Run ./download-models.sh --all first." >&2
   exit 1
 fi
+
+# ── Pre-flight ────────────────────────────────────────────────────────────────
+# Actually fetch a file the way download-models.sh will, over loopback, BEFORE
+# handing the address out. A layout mismatch is invisible in the directory
+# listing above — it only shows up as a room full of simultaneous 404s.
+preflight() {
+  local sample rel flat probe code_flat code_nested
+  sample="$(find "$MODEL_DIR" -name '*.gguf' -type f 2>/dev/null | head -1 || true)"
+  [ -z "$sample" ] && return 0
+  rel="${sample#"$MODEL_DIR"/}"
+  flat="$(basename "$rel")"
+
+  # --directory, not a cd: this probe must serve the same tree the real server
+  # will, and the script's CWD is wherever the instructor ran it from.
+  python3 -m http.server "$PORT" --bind 127.0.0.1 --directory "$MODEL_DIR" >/dev/null 2>&1 &
+  probe=$!
+  sleep 1
+  if ! kill -0 "$probe" 2>/dev/null; then
+    echo "   pre-flight  skipped — is :$PORT already in use?"
+    return 0
+  fi
+
+  # HEAD, not GET: python's http.server supports it, so probing costs no
+  # bandwidth even against a 2.5 GB file.
+  code_flat="$(curl -s -I -o /dev/null -w '%{http_code}' --max-time 10 \
+    "http://127.0.0.1:$PORT/$flat" 2>/dev/null || echo 000)"
+  code_nested="$(curl -s -I -o /dev/null -w '%{http_code}' --max-time 10 \
+    "http://127.0.0.1:$PORT/$rel" 2>/dev/null || echo 000)"
+
+  kill "$probe" 2>/dev/null || true
+  wait "$probe" 2>/dev/null || true
+  sleep 0.3
+
+  echo "   pre-flight  /$flat -> HTTP $code_flat"
+  [ "$rel" != "$flat" ] && echo "               /$rel -> HTTP $code_nested"
+
+  if [ "$code_flat" != "200" ] && [ "$code_nested" != "200" ]; then
+    echo
+    echo "!! Neither URL shape resolved — students would get 404s from this mirror." >&2
+    echo "   MODEL_DIR is $MODEL_DIR; check the .gguf files are really in it." >&2
+    return 1
+  fi
+  echo "   layout OK   download-models.sh will find these files."
+  return 0
+}
+
+command -v python3 >/dev/null 2>&1 && { preflight || exit 1; }
 
 # Python is the only dependency, and every OS in the workshop has it.
 if command -v python3 >/dev/null 2>&1; then

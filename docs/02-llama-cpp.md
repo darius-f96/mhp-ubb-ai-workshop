@@ -35,10 +35,11 @@ Apple Silicon gets Metal support in this build, so models offload to the GPU aut
 
 ### Ubuntu / WSL2 — build from source
 
-There is no good apt package; building takes a few minutes and is worth doing once so you understand where the binary came from.
+There is no good apt package; building takes a few minutes and is worth doing once so you understand where the binary came from. **You should already have done this in [00-prerequisites.md](00-prerequisites.md#5-llamacpp)** — if `llama-server --version` works, skip to [Verify](#verify).
 
 ```bash
 sudo apt update && sudo apt install -y build-essential cmake git
+cd ~                                    # ← build in HOME, not inside the workshop repo
 git clone https://github.com/ggml-org/llama.cpp
 cd llama.cpp
 cmake -B build
@@ -52,6 +53,8 @@ echo 'export PATH="$HOME/llama.cpp/build/bin:$PATH"' >> ~/.bashrc
 source ~/.bashrc
 llama-server --version
 ```
+
+> **Build it in `~`, not inside `mhp-ubb-ai-workshop/`.** Cloning llama.cpp into the workshop repo nests a second Git repository inside the one you commit your exercises to. Nothing gitignores it, so your `git status` becomes noise for the rest of the day — and the PATH line above assumes `$HOME/llama.cpp` anyway.
 
 > **NVIDIA GPU on Linux?** Add `-DGGML_CUDA=ON` to the `cmake -B build` line. You will need the CUDA toolkit. The workshop does not require this.
 

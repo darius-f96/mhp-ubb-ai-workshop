@@ -164,7 +164,7 @@ Use the same pinned tag as `configs/litellm/docker-compose.yml` — see [chapter
 npm install -g @qwen-code/qwen-code
 ```
 
-If you must work with no internet at all, see [troubleshooting.md](troubleshooting.md#offline-mode).
+Once the weights, the Docker image and the npm packages are all local, **nothing else in this workshop touches the network**. Every remaining command — `llama-server`, `llama-swap`, LiteLLM routing to `host.docker.internal`, the agents, the RAG exercise — runs entirely on your machine. Only the optional cloud fallback routes need internet, and those fail on their own without taking anything else with them.
 
 ---
 

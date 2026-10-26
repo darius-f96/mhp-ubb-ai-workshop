@@ -23,7 +23,17 @@
     "    samplingParams is also atomic: if you set it, put everything you want in it.",
     "",
     "Model ids below must match model_name entries in configs/litellm/config.yaml,",
-    "which in turn must match ids your llama-swap exposes."
+    "which in turn must match ids your llama-swap exposes.",
+    "",
+    "NO mcpServers BLOCK HERE, DELIBERATELY. Get the local model answering a",
+    "question end to end FIRST -- an MCP server is a second system to install and",
+    "debug on top of everything else, and every server adds its tool schemas to",
+    "every request. On an 8192-token window that can eat the whole budget before",
+    "your prompt arrives, on the model size that is worst at tool calling.",
+    "When your stack works and you want one:",
+    "    qwen mcp add context7 npx -- -y @upstash/context7-mcp",
+    "then run /context detail before and after to see what it cost you.",
+    "See docs/05-qwen-code.md#mcp-eats-your-context."
   ],
 
   "env": {
@@ -97,14 +107,5 @@
         }
       }
     ]
-  },
-
-  "mcpServers": {
-    "context7": {
-      "command": "npx",
-      "args": ["-y", "@upstash/context7-mcp"],
-      "timeout": 30000,
-      "trust": false
-    }
   }
 }

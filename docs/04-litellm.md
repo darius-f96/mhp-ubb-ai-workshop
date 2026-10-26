@@ -35,7 +35,19 @@ cp .env.example .env
 $EDITOR .env                 # set LITELLM_MASTER_KEY; cloud keys are optional
 docker compose up -d
 docker compose logs -f       # Ctrl-C to stop following; the container keeps running
+cd ../..
 ```
+
+Then load the key into **your shell** as well:
+
+```bash
+set -a; . configs/litellm/.env; set +a
+echo "$LITELLM_API_KEY"      # must print your key, not an empty line
+```
+
+> **Do not skip that line.** `env_file:` in the compose file feeds the **container** — your terminal never sees it. Every `curl` on this page sends `$LITELLM_API_KEY`, and if it expands to nothing you get `401` from a perfectly healthy gateway. This is the most confusing failure in the whole chapter, because the container logs look clean and the thing that is unset is invisible.
+>
+> `set -a` makes everything the file defines exported; `set +a` turns that off again. It is the standard way to pull a `.env` into the current shell.
 
 > **The master key must start with `sk-`.** The docs state this as a requirement. Every key in this repo's examples does (`sk-workshop-change-me`) — keep that prefix if you change the value, or a newer LiteLLM may reject the key at startup rather than at request time.
 
