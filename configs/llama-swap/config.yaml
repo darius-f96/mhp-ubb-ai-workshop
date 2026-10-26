@@ -1,0 +1,156 @@
+# llama-swap — workshop configuration
+#
+# One port (:8090), four models, only one resident in RAM at a time. Ask for a
+# model and llama-swap starts its engine; ask for a different one and it stops
+# the first. That is the whole idea, and it is what makes several specialists
+# practical on a 16 GB laptop.
+#
+# ─── BEFORE YOU RUN THIS, EDIT TWO MACROS BELOW ───────────────────────────────
+#   model-dir          where your .gguf files live
+#   llama-server-path  where the llama.cpp server binary is
+# Everything else works as-is.
+#
+# Run it in the foreground so you can read the log (do this during the workshop):
+#   llama-swap --config configs/llama-swap/config.yaml
+#
+# Then in a second terminal:
+#   curl -s http://127.0.0.1:8090/v1/models | jq -r '.data[].id'
+#
+# Schema notes, verified against llama-swap's own config-schema.json:
+#   * `models` is the only REQUIRED top-level key.
+#   * `cmd` is the only REQUIRED key inside each model.
+#   * `proxy` defaults to http://localhost:${PORT}, so we omit it.
+#   * ${PORT} and ${MODEL_ID} are RESERVED macros — you cannot define them.
+#   * An unknown macro is a hard error, not a silent blank. So ${HOME} does NOT
+#     work here; that is why model-dir is a macro you edit once.
+
+# ── Global settings ──────────────────────────────────────────────────────────
+
+# Seconds llama-swap waits for an engine to become healthy before killing it.
+# A cold start has to read the model into memory; too low and you get
+# "upstream command exited prematurely" on a perfectly good model.
+healthCheckTimeout: 300
+
+# Where to assign upstream ports. llama-swap picks a free one per running model.
+startPort: 18080
+
+# Log every request. Invaluable while learning; turn it off later if it is noisy.
+logLevel: info
+
+# Models idle longer than this are unloaded, freeing RAM. 0 = never (globalTTL);
+# per-model `ttl` overrides it.
+globalTTL: 0
+
+# ── Macros ────────────────────────────────────────────────────────────────────
+# Text substitution applied to every `cmd`. Define once, reuse everywhere — and
+# a typo'd macro name fails loudly at startup instead of running a broken command.
+macros:
+  # EDIT ME: the directory holding your .gguf files (scripts/download-models.sh
+  # puts them flat in ~/models).
+  model-dir: "/home/YOURNAME/models"
+
+  # EDIT ME: your llama-server binary.
+  #   Homebrew (macOS / Linux):        llama-server
+  #   Built from source:               /path/to/llama.cpp/build/bin/llama-server
+  #   Official release binary:         /path/to/llama-server
+  llama-server-path: "llama-server"
+
+  # EDIT ME if you have a GPU:
+  #   0    = CPU only (correct for the workshop baseline, and what we benchmark)
+  #   999  = offload every layer to GPU (Apple Silicon Metal, or NVIDIA CUDA)
+  ngl: "0"
+
+  # Shared flags for every model. --jinja makes the engine use the chat template
+  # embedded in the GGUF instead of a guess — without it, output degrades and
+  # tool calling does not work at all.
+  common-args: "--host 127.0.0.1 --port ${PORT} --jinja"
+
+# ── Models ────────────────────────────────────────────────────────────────────
+
+models:
+  # The workhorse. Small enough to be quick on a CPU, capable enough to be worth
+  # talking to. This is the model the exercises assume.
+  chat:
+    cmd: >
+      ${llama-server-path}
+      -m ${model-dir}/Qwen3-1.7B-Q4_K_M.gguf
+      ${common-args}
+      -ngl ${ngl}
+      -c 8192
+    # Unload after 10 minutes idle. On a laptop you want RAM back.
+    ttl: 600
+
+  # A code specialist. General models are mediocre at code; this one is trained
+  # for it, and at 1.5B it is still fast enough to be pleasant.
+  coder:
+    cmd: >
+      ${llama-server-path}
+      -m ${model-dir}/qwen2.5-coder-1.5b-instruct-q4_k_m.gguf
+      ${common-args}
+      -ngl ${ngl}
+      -c 8192
+      --reasoning-budget 0
+    ttl: 600
+
+  # Embeddings, for retrieval / RAG. Note this is a DIFFERENT mode: --embedding
+  # makes the server return vectors from /v1/embeddings instead of chat text.
+  # It is 150 MB, so it loads instantly.
+  embed:
+    cmd: >
+      ${llama-server-path}
+      -m ${model-dir}/nomic-embed-text-v1.5.Q8_0.gguf
+      ${common-args}
+      -ngl ${ngl}
+      -c 2048
+      --embedding
+    ttl: 600
+
+  # Exercise 2's control group: 135M parameters, about 13x smaller than `chat`.
+  # Ask both the same question and compare. This is the most instructive five
+  # minutes in the workshop — it makes the scale/capability relationship
+  # something you have seen rather than been told.
+  #
+  # It is also the model to test plumbing with: it starts instantly and uses
+  # almost no RAM, so you can validate llama-swap -> LiteLLM -> agent end to end
+  # without waiting on a real model.
+  tiny:
+    cmd: >
+      ${llama-server-path}
+      -m ${model-dir}/SmolLM2-135M-Instruct-Q4_K_M.gguf
+      ${common-args}
+      -ngl ${ngl}
+      -c 4096
+    ttl: 300
+
+# ── Groups (optional) ─────────────────────────────────────────────────────────
+# A group runs several models AT THE SAME TIME, each on its own upstream port,
+# behind one name. Useful when you need chat and embeddings concurrently and do
+# not want them evicting each other.
+#
+# Costs RAM: every member stays loaded. On 16 GB, keep groups small.
+#
+# Schema (verified): swap, exclusive, persistent, members.
+#
+# groups:
+#   rag:
+#     swap: false          # members do NOT evict each other
+#     members:
+#       - chat
+#       - embed
+#
+# Then ask for the group by name:
+#   curl -s http://127.0.0.1:8090/v1/chat/completions -d '{"model":"rag",...}'
+
+# ── Alternative: let llama.cpp download the model for you ─────────────────────
+# No local files at all — the engine fetches from Hugging Face on first use.
+# The `:Q4_K_M` suffix selects the quantisation.
+#
+#   chat:
+#     cmd: >
+#       ${llama-server-path}
+#       -hf ggml-org/Qwen3-1.7B-GGUF:Q4_K_M
+#       ${common-args}
+#
+# Convenient at home. BAD in a classroom: every student triggers their own
+# multi-GB download at the same moment. Pre-download instead — see
+# docs/offline-models.md.

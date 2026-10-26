@@ -1,0 +1,108 @@
+# LiteLLM proxy config — workshop edition.
+#
+# One endpoint (:4000) in front of your local models plus an optional cloud
+# fallback. Nothing here needs editing if you filled in `.env`: values written
+# as `os.environ/NAME` are substituted from the environment at startup.
+#
+# ── The two names that confuse everyone ───────────────────────────────────────
+#   model_name        the PUBLIC alias. This is what your client asks for.
+#   litellm_params.model   the UPSTREAM id, prefixed with a provider.
+#
+# `openai/chat` means: "use the OpenAI-compatible protocol, and ask for the
+# model literally named `chat`." That `chat` must match an id your local server
+# exposes — see `curl http://localhost:8090/v1/models`.
+#
+# They do NOT have to match each other, and usually should not: `local-chat`
+# (public) → `chat` (local). Renaming is free at the gateway and costs nothing
+# downstream, which is exactly why the gateway exists.
+
+model_list:
+  # ── Local, via llama-swap ───────────────────────────────────────────────────
+  # These are the routes every student uses for most of the workshop.
+
+  - model_name: local-chat
+    litellm_params:
+      model: openai/chat
+      api_base: os.environ/LOCAL_API_BASE
+      api_key: os.environ/LOCAL_API_KEY
+      # A COLD llama-swap load has to download nothing but does have to start an
+      # engine and mmap a model — seconds, not milliseconds. LiteLLM's default
+      # request timeout will give up first and you will see a timeout that looks
+      # like a crash but is just impatience. 600s is generous and costs nothing.
+      timeout: 600
+
+  - model_name: local-coder
+    litellm_params:
+      model: openai/coder
+      api_base: os.environ/LOCAL_API_BASE
+      api_key: os.environ/LOCAL_API_KEY
+      timeout: 600
+      # Low temperature for code: you want the most likely token, not an
+      # interesting one. Creative code is a bug, not a feature.
+      temperature: 0.2
+
+  - model_name: local-embed
+    litellm_params:
+      model: openai/embed
+      api_base: os.environ/LOCAL_API_BASE
+      api_key: os.environ/LOCAL_API_KEY
+      timeout: 300
+
+  # ── Resilience demo (Exercise 5) ────────────────────────────────────────────
+  # Same local backend as `local-chat`, but with a cloud route behind it. Kill
+  # llama-swap and ask for `resilient`: the request still succeeds, served from
+  # the cloud. That is the entire point of a gateway, demonstrated in one call.
+  #
+  # With no cloud key in .env the fallback simply never triggers and you get a
+  # plain error — the workshop still works, you just cannot do Exercise 5.
+
+  - model_name: resilient
+    litellm_params:
+      model: openai/chat
+      api_base: os.environ/LOCAL_API_BASE
+      api_key: os.environ/LOCAL_API_KEY
+      timeout: 600
+
+  # Cloud routes. Both are OPTIONAL — LiteLLM starts fine with empty keys, it
+  # just fails those routes if you actually call them.
+
+  - model_name: cloud-fast
+    litellm_params:
+      model: openrouter/openai/gpt-4o-mini
+      api_key: os.environ/OPENROUTER_API_KEY
+      timeout: 120
+
+  - model_name: cloud-gemini
+    litellm_params:
+      model: gemini/gemini-2.0-flash
+      api_key: os.environ/GEMINI_API_KEY
+      timeout: 120
+
+# ── Router behaviour ─────────────────────────────────────────────────────────
+router_settings:
+  # If `resilient` fails, retry on these, in order. First success wins.
+  # This is what makes Exercise 5 work.
+  fallbacks:
+    - resilient: ["cloud-fast", "cloud-gemini"]
+
+  # How long to wait before declaring a deployment unhealthy and routing around
+  # it. Short, because on a laptop "unhealthy" usually means "you stopped it".
+  allowed_fails: 2
+  cooldown_time: 60
+
+  # Retry transient errors on the same model before falling back.
+  num_retries: 1
+
+litellm_settings:
+  # Return errors in a useful shape instead of a bare 500.
+  drop_params: true
+  # Do NOT set `success_callback`/`failure_callback` here: they need a database.
+  # DB-less mode is deliberate — a workshop does not need spend tracking, and
+  # adding a Postgres dependency is how a 5-minute setup becomes a 50-minute one.
+
+general_settings:
+  # Master key from .env. Clients send it as `Authorization: Bearer <key>`.
+  # With no database configured, LiteLLM runs in DB-less mode: the master key
+  # works, but you cannot mint additional virtual keys or track spend from the
+  # admin UI. That is the right trade for this workshop.
+  master_key: os.environ/LITELLM_MASTER_KEY

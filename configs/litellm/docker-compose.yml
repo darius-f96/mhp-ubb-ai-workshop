@@ -1,0 +1,41 @@
+services:
+  litellm:
+    # Pinned, not `main-latest`: a floating tag can change under you mid-workshop
+    # and every student gets a different proxy. Re-pin deliberately, never accidentally.
+    #
+    # This exact tag was tested with this config.yaml: routes load, os.environ
+    # substitution works, chat + embeddings proxy correctly, and an unauthenticated
+    # request is rejected with 401.
+    #
+    # To find newer stable tags (the registry caps the listing, so sort them):
+    #   TOKEN=$(curl -s "https://ghcr.io/token?scope=repository:berriai/litellm:pull" | jq -r .token)
+    #   curl -s -H "Authorization: Bearer $TOKEN" \
+    #     "https://ghcr.io/v2/berriai/litellm/tags/list?n=1000" \
+    #     | jq -r '.tags[]' | grep 'stable$' | sort -V | tail
+    # Note the image tags lag the PyPI version numbering; do not expect them to match.
+    image: ghcr.io/berriai/litellm:main-v1.66.0-stable
+    container_name: litellm
+    command: ["--config", "/app/config.yaml", "--port", "4000"]
+    ports:
+      - "4000:4000"
+    volumes:
+      - ./config.yaml:/app/config.yaml:ro
+    env_file:
+      - .env
+    environment:
+      - LITELLM_LOG=INFO
+    # THE LINE THAT MAKES IT WORK ON LINUX.
+    # LiteLLM runs inside a container, but llama-swap/llama.cpp run on the host.
+    # From inside the container, 127.0.0.1 means the CONTAINER, not your laptop,
+    # so config.yaml points api_base at `host.docker.internal`. Docker Desktop
+    # (macOS/Windows) provides that name automatically; Linux does not, and this
+    # line adds it. Harmless on macOS/Windows, required on Linux and WSL2.
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "python3 -c \"import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:4000/health/liveliness',timeout=5).status==200 else 1)\""]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s

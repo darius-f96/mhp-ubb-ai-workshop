@@ -1,0 +1,73 @@
+{
+  "$comment": [
+    "Qwen Code settings for the workshop. Copy to ~/.qwen/settings.json (user scope)",
+    "or to <project>/.qwen/settings.json (project scope, wins over user scope).",
+    "",
+    "JSON has no comments, so notes live here and in docs/05-qwen-code.md.",
+    "",
+    "EDIT BEFORE USE:",
+    "  1. env.WORKSHOP_LITELLM_KEY  -> must match LITELLM_MASTER_KEY in configs/litellm/.env",
+    "  2. generationConfig.contextWindowSize -> must match the -c you gave llama.cpp.",
+    "     Qwen Code otherwise GUESSES the context window from the model NAME, and a",
+    "     guess that is too large makes requests fail or silently truncate.",
+    "",
+    "Model ids below must match model_name entries in configs/litellm/config.yaml,",
+    "which in turn must match ids your llama-swap exposes."
+  ],
+
+  "env": {
+    "WORKSHOP_LITELLM_KEY": "sk-workshop-change-me"
+  },
+
+  "modelProviders": {
+    "openai": [
+      {
+        "id": "local-chat",
+        "name": "local-chat — Qwen3-1.7B, self-hosted",
+        "baseUrl": "http://127.0.0.1:4000/v1",
+        "envKey": "WORKSHOP_LITELLM_KEY",
+        "generationConfig": {
+          "contextWindowSize": 8192,
+          "temperature": 0.2
+        }
+      },
+      {
+        "id": "local-coder",
+        "name": "local-coder — Qwen2.5-Coder-1.5B, self-hosted",
+        "baseUrl": "http://127.0.0.1:4000/v1",
+        "envKey": "WORKSHOP_LITELLM_KEY",
+        "generationConfig": {
+          "contextWindowSize": 8192,
+          "temperature": 0.2
+        }
+      },
+      {
+        "id": "resilient",
+        "name": "resilient — local first, cloud fallback",
+        "baseUrl": "http://127.0.0.1:4000/v1",
+        "envKey": "WORKSHOP_LITELLM_KEY",
+        "generationConfig": {
+          "contextWindowSize": 8192
+        }
+      },
+      {
+        "id": "cloud-fast",
+        "name": "cloud-fast — use when the local model is not good enough",
+        "baseUrl": "http://127.0.0.1:4000/v1",
+        "envKey": "WORKSHOP_LITELLM_KEY",
+        "generationConfig": {
+          "contextWindowSize": 128000
+        }
+      }
+    ]
+  },
+
+  "mcpServers": {
+    "context7": {
+      "command": "npx",
+      "args": ["-y", "@upstash/context7-mcp"],
+      "timeout": 30000,
+      "trust": false
+    }
+  }
+}

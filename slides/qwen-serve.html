@@ -1,0 +1,511 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>qwen serve — your coding agent as a daemon</title>
+<style>
+  :root{
+    --bg:#0b0e14; --bg2:#121722; --fg:#e6e9ef; --dim:#98a2b3;
+    --acc:#7dd3fc; --acc2:#a78bfa; --ok:#4ade80; --warn:#fbbf24; --bad:#f87171;
+    --line:#232a38; --code:#0f1420;
+    --mono:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,"Liberation Mono",monospace;
+    --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%;background:var(--bg);color:var(--fg);font-family:var(--sans);
+    -webkit-font-smoothing:antialiased;overflow:hidden}
+  #deck{height:100%;width:100%;position:relative}
+  .slide{position:absolute;inset:0;display:none;flex-direction:column;justify-content:center;
+    padding:clamp(24px,5vh,64px) clamp(24px,6vw,96px);overflow-y:auto}
+  .slide.active{display:flex;animation:in .28s ease-out}
+  @keyframes in{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+  h1{font-size:clamp(30px,5.2vw,62px);line-height:1.08;letter-spacing:-.02em;margin-bottom:.35em}
+  h2{font-size:clamp(24px,3.6vw,44px);line-height:1.15;letter-spacing:-.015em;margin-bottom:.5em}
+  h3{font-size:clamp(16px,1.7vw,22px);color:var(--acc);margin:1em 0 .4em;
+    text-transform:uppercase;letter-spacing:.09em;font-weight:600}
+  p,li{font-size:clamp(15px,1.55vw,21px);line-height:1.6;color:var(--fg)}
+  .dim{color:var(--dim)}
+  ul,ol{margin:.4em 0 .4em 1.3em}
+  li{margin:.42em 0}
+  li::marker{color:var(--acc)}
+  strong{color:#fff;font-weight:650}
+  em{color:var(--acc);font-style:normal}
+  code{font-family:var(--mono);font-size:.87em;background:var(--code);
+    border:1px solid var(--line);border-radius:5px;padding:.12em .42em;color:#c9d6e8;white-space:nowrap}
+  pre{background:var(--code);border:1px solid var(--line);border-left:3px solid var(--acc);
+    border-radius:9px;padding:14px 18px;overflow-x:auto;margin:.7em 0;max-width:100%}
+  pre code{background:none;border:none;padding:0;white-space:pre;color:#d6e2f2;
+    font-size:clamp(12px,1.25vw,16px);line-height:1.55}
+  .cmt{color:#5f6b7f}
+  .kw{color:var(--acc2)} .str{color:var(--ok)} .num{color:var(--warn)} .flg{color:var(--acc)}
+  .kicker{font-family:var(--mono);font-size:clamp(11px,1.1vw,14px);color:var(--acc);
+    text-transform:uppercase;letter-spacing:.16em;margin-bottom:1.1em}
+  .sub{font-size:clamp(16px,1.9vw,25px);color:var(--dim);line-height:1.5;max-width:34em}
+  .grid{display:grid;gap:clamp(12px,1.5vw,22px);margin-top:.6em}
+  .g2{grid-template-columns:repeat(auto-fit,minmax(min(100%,300px),1fr))}
+  .g3{grid-template-columns:repeat(auto-fit,minmax(min(100%,230px),1fr))}
+  .card{background:var(--bg2);border:1px solid var(--line);border-radius:11px;padding:clamp(13px,1.5vw,20px)}
+  .card h4{font-size:clamp(14px,1.4vw,18px);margin-bottom:.45em;color:#fff}
+  .card p,.card li{font-size:clamp(13px,1.3vw,17px);color:var(--dim)}
+  .card.acc{border-left:3px solid var(--acc)} .card.ok{border-left:3px solid var(--ok)}
+  .card.warn{border-left:3px solid var(--warn)} .card.bad{border-left:3px solid var(--bad)}
+  .card.pur{border-left:3px solid var(--acc2)}
+  table{width:100%;border-collapse:collapse;margin:.7em 0;font-size:clamp(12px,1.3vw,17px)}
+  th,td{text-align:left;padding:.5em .7em;border-bottom:1px solid var(--line);vertical-align:top}
+  th{color:var(--acc);font-family:var(--mono);font-size:.82em;text-transform:uppercase;letter-spacing:.07em}
+  td{color:var(--dim)} td:first-child{color:var(--fg);font-family:var(--mono);white-space:nowrap}
+  .diagram{font-family:var(--mono);background:var(--code);border:1px solid var(--line);
+    border-radius:9px;padding:clamp(12px,1.6vw,22px);overflow-x:auto;
+    font-size:clamp(10px,1.15vw,15px);line-height:1.5;color:#b9c7db;white-space:pre}
+  .big{font-size:clamp(40px,7vw,86px);font-weight:700;letter-spacing:-.03em;line-height:1}
+  .pill{display:inline-block;font-family:var(--mono);font-size:.78em;padding:.2em .7em;
+    border-radius:999px;border:1px solid var(--line);background:var(--bg2);color:var(--dim);margin:.15em .2em}
+  .pill.on{border-color:var(--ok);color:var(--ok)}
+  .pill.off{border-color:var(--bad);color:var(--bad)}
+  .note{border-left:3px solid var(--warn);background:rgba(251,191,36,.06);
+    padding:.75em 1.1em;border-radius:0 8px 8px 0;margin:.8em 0;
+    font-size:clamp(13px,1.35vw,18px);color:#e8dcc0}
+  .note.bad{border-color:var(--bad);background:rgba(248,113,113,.07);color:#f0d4d4}
+  .note.ok{border-color:var(--ok);background:rgba(74,222,128,.06);color:#d3ecd9}
+  footer{position:fixed;bottom:0;left:0;right:0;display:flex;justify-content:space-between;
+    align-items:center;padding:10px 20px;font-family:var(--mono);font-size:12px;
+    color:#4d5768;background:linear-gradient(transparent,rgba(11,14,20,.95) 45%);z-index:50}
+  #bar{position:fixed;top:0;left:0;height:2px;background:var(--acc);z-index:60;transition:width .25s}
+  #nav{position:fixed;bottom:8px;left:50%;transform:translateX(-50%);display:flex;gap:6px;z-index:60}
+  #nav button{background:var(--bg2);border:1px solid var(--line);color:var(--dim);
+    width:30px;height:26px;border-radius:6px;cursor:pointer;font-size:13px;line-height:1}
+  #nav button:hover{border-color:var(--acc);color:var(--acc)}
+  .center{text-align:center;align-items:center}
+  .center ul,.center ol{text-align:left;display:inline-block}
+  #ov{position:fixed;inset:0;background:rgba(5,7,11,.97);z-index:100;display:none;
+    overflow-y:auto;padding:22px}
+  #ov.on{display:block}
+  #ovgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(215px,1fr));gap:11px}
+  .thumb{background:var(--bg2);border:1px solid var(--line);border-radius:9px;padding:11px 13px;
+    cursor:pointer;transition:border-color .15s}
+  .thumb:hover{border-color:var(--acc)}
+  .thumb .n{font-family:var(--mono);font-size:11px;color:var(--acc)}
+  .thumb .t{font-size:13.5px;color:var(--fg);margin-top:3px;line-height:1.35}
+  @media print{
+    html,body{overflow:visible;background:#fff;color:#000}
+    .slide{display:flex!important;position:relative;page-break-after:always;height:auto;min-height:92vh}
+    footer,#nav,#bar,#ov{display:none!important}
+  }
+</style>
+</head>
+<body>
+<div id="bar"></div>
+<div id="deck">
+
+<!-- 1 -->
+<section class="slide center">
+  <div class="kicker">MHP · UBB — AI Workshop</div>
+  <h1>qwen serve</h1>
+  <p class="sub">Turning a terminal coding agent into a daemon you can reach from a browser, a phone, or another machine.</p>
+  <p style="margin-top:2em"><span class="pill">Qwen Code v0.25.1</span><span class="pill">stage&nbsp;1 experimental</span><span class="pill">flag: --http-bridge</span></p>
+</section>
+
+<!-- 2 -->
+<section class="slide">
+  <div class="kicker">The problem</div>
+  <h2>Your agent lives in a terminal</h2>
+  <div class="grid g2">
+    <div class="card bad">
+      <h4>What that costs you</h4>
+      <ul>
+        <li>Tied to one window on one machine</li>
+        <li>Close the laptop lid &rarr; the run dies</li>
+        <li>No way to watch a long job from elsewhere</li>
+        <li>Nothing to script against</li>
+        <li>One session, one user, one SSH tab</li>
+      </ul>
+    </div>
+    <div class="card ok">
+      <h4>What <code>qwen serve</code> gives you</h4>
+      <ul>
+        <li>An HTTP daemon with a real API</li>
+        <li>A browser UI (the Web Shell)</li>
+        <li>Sessions that survive a page refresh</li>
+        <li>Access from a phone on the same network</li>
+        <li>Many concurrent sessions</li>
+      </ul>
+    </div>
+  </div>
+  <div class="note">One command changes the deployment shape: <code>qwen</code> is a process you watch. <code>qwen serve</code> is a service you talk to.</div>
+</section>
+
+<!-- 3 -->
+<section class="slide">
+  <div class="kicker">Start here</div>
+  <h2>The whole thing in one command</h2>
+<pre><code><span class="cmt"># loopback, no auth needed, Web Shell on by default</span>
+<span class="kw">qwen</span> serve
+
+<span class="cmt"># it prints something like:</span>
+<span class="cmt">#   Web Shell:  http://127.0.0.1:4170</span>
+<span class="cmt">#   API:        http://127.0.0.1:4170/session</span></code></pre>
+  <p>Defaults, straight from <code>qwen serve --help</code>:</p>
+  <table>
+    <tr><th>flag</th><th>default</th><th>meaning</th></tr>
+    <tr><td>--port</td><td>4170</td><td>TCP port. <code>0</code> asks the OS for a free one.</td></tr>
+    <tr><td>--hostname</td><td>127.0.0.1</td><td>Loopback &rarr; auth-free. Anything else &rarr; token required.</td></tr>
+    <tr><td>--web</td><td>true</td><td>Serve the browser UI. <code>--no-web</code> = API only.</td></tr>
+    <tr><td>--http-bridge</td><td>true</td><td>Preheats a <code>qwen --acp</code> child process.</td></tr>
+    <tr><td>--max-sessions</td><td>32</td><td>Concurrent live sessions before 503.</td></tr>
+  </table>
+</section>
+
+<!-- 4 -->
+<section class="slide">
+  <div class="kicker">Architecture</div>
+  <h2>What actually starts</h2>
+  <div class="diagram">            you
+             │
+   ┌─────────┴──────────┬─────────────────────┐
+   │                    │                     │
+browser             curl / script         another qwen
+(Web Shell)         (HTTP + SSE)          (--join / Agent Host)
+   │                    │                     │
+   └────────────────────┴─────────────────────┘
+                        │
+              ┌─────────▼──────────┐
+              │   qwen serve       │   daemon :4170
+              │   ─ HTTP API       │   bearer token (non-loopback)
+              │   ─ Web Shell UI   │   CORS allowlist
+              │   ─ session store  │   SSE replay ring
+              └─────────┬──────────┘
+                        │  --http-bridge (stage 1)
+              ┌─────────▼──────────┐
+              │  qwen --acp child  │   the real agent runtime
+              │  tools, MCP, skills│   one per session
+              └────────────────────┘</div>
+  <div class="note">Stage 1 spawns a child process per session. The help text is explicit that <strong>stage 2 native in-process mode is not yet implemented</strong>, and <code>--http-bridge</code> will become opt-in then. Treat the internals as moving.</div>
+</section>
+
+<!-- 5 -->
+<section class="slide">
+  <div class="kicker">Security — the most important slide</div>
+  <h2>Loopback is trusted. Everything else is not.</h2>
+  <div class="grid g2">
+    <div class="card ok">
+      <h4>Bind 127.0.0.1 <span class="pill on">default</span></h4>
+      <p>Auth-free by design. Only processes on your machine can reach it.</p>
+<pre style="margin-top:.6em"><code><span class="kw">qwen</span> serve</code></pre>
+    </div>
+    <div class="card warn">
+      <h4>Bind anything else <span class="pill off">token required</span></h4>
+      <p>A LAN IP requires a bearer token. With neither <code>--token</code> nor <code>QWEN_SERVER_TOKEN</code>, one is <em>generated at startup</em>.</p>
+<pre style="margin-top:.6em"><code><span class="kw">qwen</span> serve <span class="flg">--hostname</span> 192.168.1.20</code></pre>
+    </div>
+  </div>
+  <div class="note bad"><strong>Read the help text carefully:</strong> "Loopback (127.0.0.0/8, localhost, ::1, [::1]) is auth-free; anything else requires a token." An agent that can run shell commands, exposed on your network without a token, is not a small mistake. <code>--require-auth</code> forces a token even on loopback — use it on shared dev boxes and CI runners, where any local user can hit 127.0.0.1.</div>
+</section>
+
+<!-- 6 -->
+<section class="slide">
+  <div class="kicker">Security, continued</div>
+  <h2>Three settings that bite people</h2>
+  <div class="grid g3">
+    <div class="card warn">
+      <h4>--allow-origin</h4>
+      <p>Browser clients send an <code>Origin</code> header. If it is not on the allowlist the daemon <strong>403s every request</strong> — including all the ones from your phone.</p>
+<pre><code><span class="flg">--allow-origin</span> \
+  http://192.168.1.20:4170</code></pre>
+    </div>
+    <div class="card warn">
+      <h4>--tls-cert / --tls-key</h4>
+      <p>Browsers only allow the microphone on a <em>secure context</em>. Over a LAN IP that means HTTPS, or voice input silently does not work.</p>
+<pre><code><span class="cmt"># mkcert makes a local cert</span>
+<span class="flg">--tls-cert</span> cert.pem \
+<span class="flg">--tls-key</span> key.pem</code></pre>
+    </div>
+    <div class="card bad">
+      <h4>--enable-session-shell</h4>
+      <p>Turns on direct <code>POST /session/:id/shell</code> — arbitrary command execution over HTTP. Off by default. Leave it off unless you have a real reason.</p>
+    </div>
+  </div>
+</section>
+
+<!-- 7 -->
+<section class="slide">
+  <div class="kicker">A real trade-off</div>
+  <h2><code>--local-control</code> vs a static token</h2>
+  <div class="grid g2">
+    <div class="card pur">
+      <h4>--local-control</h4>
+      <ul>
+        <li>Shares the Web Shell on your LAN</li>
+        <li>Mints its own <em>revocable</em> pairing token</li>
+        <li>Prints a QR code in the terminal</li>
+        <li>Best-effort sleep inhibition</li>
+        <li>Settings card can turn it off while the daemon lives</li>
+      </ul>
+      <p style="margin-top:.7em;color:var(--bad)"><strong>But:</strong> the pairing token is minted in memory and revoked at stop. Restart &rarr; <strong>new token</strong> &rarr; every bookmarked URL breaks.</p>
+    </div>
+    <div class="card acc">
+      <h4>Static bind</h4>
+<pre><code><span class="kw">qwen</span> serve \
+  <span class="flg">--hostname</span> 192.168.1.20 \
+  <span class="flg">--token</span> <span class="str">"$QWEN_SERVER_TOKEN"</span> \
+  <span class="flg">--allow-origin</span> http://192.168.1.20:4170</code></pre>
+      <ul>
+        <li>Token comes from you, so it <strong>survives restarts</strong></li>
+        <li>Bookmark <code>http://IP:4170/#token=…</code> once, forever</li>
+        <li>No QR — you manage the secret yourself</li>
+      </ul>
+    </div>
+  </div>
+  <div class="note ok"><strong>Rule of thumb:</strong> ad-hoc demo to a room &rarr; <code>--local-control</code> and scan the QR. Persistent setup you will come back to &rarr; static token. Also note <code>--open</code> hands a token-bearing URL to the browser launcher, which is <em>visible in the process list</em> — open it manually on a multi-user host.</div>
+</section>
+
+<!-- 8 -->
+<section class="slide">
+  <div class="kicker">Sessions</div>
+  <h2>Sessions outlive your browser tab</h2>
+  <p>The Web Shell talks to the daemon over <strong>Server-Sent Events</strong>. Drop the connection, reconnect, and it replays what you missed:</p>
+<pre><code><span class="kw">GET</span> /session/:id/events
+<span class="kw">Last-Event-ID</span>: 4182        <span class="cmt">← resume from here</span></code></pre>
+  <div class="grid g2" style="margin-top:.8em">
+    <div class="card">
+      <h4>The replay ring</h4>
+      <p><code>--event-ring-size</code> (default <strong>8000</strong>) is how much history a reconnect can recover. Bigger = more headroom, a few hundred KB extra RAM per session.</p>
+    </div>
+    <div class="card">
+      <h4>Late attach</h4>
+      <p><code>POST /session/:id/load</code> hands a joining client a compacted snapshot. <code>--compacted-replay-max-bytes</code> caps it (max 256 MiB).</p>
+    </div>
+  </div>
+  <div class="note">This is the feature that makes it feel like a real service rather than a toy. Refresh the page on your phone mid-run and you are back where you were.</div>
+</section>
+
+<!-- 9 -->
+<section class="slide">
+  <div class="kicker">Limits</div>
+  <h2>It refuses work rather than dying</h2>
+  <table>
+    <tr><th>flag</th><th>default</th><th>what it protects</th></tr>
+    <tr><td>--max-sessions</td><td>32</td><td>Concurrent live sessions; beyond it, new spawns get <code>503</code>. Attaching to existing ones still works.</td></tr>
+    <tr><td>--max-total-sessions</td><td>—</td><td>Same cap across <em>all</em> workspace runtimes.</td></tr>
+    <tr><td>--max-pending-prompts-per-session</td><td>5</td><td>Queued prompts per session; excess get <code>503</code>.</td></tr>
+    <tr><td>--max-connections</td><td>256</td><td>Raw TCP sockets. Slow or phantom SSE clients are rejected at accept time.</td></tr>
+    <tr><td>--prompt-deadline-ms</td><td>—</td><td>Server-side wallclock cap on a prompt.</td></tr>
+    <tr><td>--mcp-client-budget</td><td>—</td><td>Live MCP clients per workspace. <code>--mcp-budget-mode</code> chooses warn / enforce / off.</td></tr>
+  </table>
+  <p class="dim" style="margin-top:.5em"><code>0</code> disables a cap. Note the difference between <em>warn</em> (observability only) and <em>enforce</em> (refuses) — boot rejects <code>enforce</code> without a budget set.</p>
+</section>
+
+<!-- 10 -->
+<section class="slide">
+  <div class="kicker">Memory</div>
+  <h2>A budget, not a hope</h2>
+  <div class="grid g2">
+    <div class="card acc">
+      <h4>--memory-budget-mb</h4>
+      <p>Total budget for the daemon <em>process tree</em>. Unset, it is derived as <strong>50% of cgroup-constrained or host memory</strong>, capped at available memory. Range 1024–1048576.</p>
+      <p style="margin-top:.5em">Also sizes a daemon-wide pool of 5% of the budget (capped at 1024 MB) for replay growth.</p>
+    </div>
+    <div class="card">
+      <h4>--memory-pressure-mode</h4>
+      <p><code>observe</code> (default) reports the level and raises a status issue when it leaves normal. <code>off</code> reports figures but raises nothing. <strong>Nothing remediates in either mode.</strong></p>
+    </div>
+    <div class="card">
+      <h4>--child-heap-mode</h4>
+      <p><code>observe</code> models a per-child partition and counts spawns that would have exceeded it. <code>admit</code> rejects starts past the limit. <code>enforce</code> is experimental.</p>
+      <p style="margin-top:.5em;color:var(--warn)">A refusal count of 0 does <em>not</em> mean the partition would be safe to apply.</p>
+    </div>
+    <div class="card warn">
+      <h4>Why this matters on a laptop</h4>
+      <p>Each session is a child process with its own V8 heap. Thirty-two sessions is thirty-two heaps. On a 16 GB machine that is the difference between a demo and a freeze.</p>
+    </div>
+  </div>
+</section>
+
+<!-- 11 -->
+<section class="slide">
+  <div class="kicker">Workspaces</div>
+  <h2>More than one project, more than one machine</h2>
+  <h3>Multiple workspaces</h3>
+<pre><code><span class="kw">qwen</span> serve <span class="flg">--workspace</span> /repos/api <span class="flg">--workspace</span> /repos/web</code></pre>
+  <p class="dim">Repeat the flag to register isolated runtimes; the first is primary. A <code>POST /session</code> with a mismatched <code>cwd</code> returns <code>400 workspace_mismatch</code> — it will not let a session wander into the wrong project.</p>
+  <h3>Linking machines</h3>
+  <div class="grid g2">
+    <div class="card pur">
+      <h4>--join</h4>
+      <p>Join another Qwen Code as a runtime, using the one-line link from <em>Agent &rarr; Runtime &rarr; Add runtime</em>. Your laptop becomes a worker for someone else's daemon.</p>
+    </div>
+    <div class="card pur">
+      <h4>Agent Host</h4>
+      <p><code>--agent-host-server</code>, <code>--agent-host-workspace-id</code>, <code>--agent-host-name</code> register this daemon as a host with a primary. <code>--agent-host-allow-http</code> permits unencrypted connections — <em>trusted demo networks only</em>.</p>
+    </div>
+  </div>
+  <p class="dim" style="margin-top:.6em"><code>--memory-project-scope</code> picks how project memory is partitioned: <code>workspace</code> (default, isolated) or <code>git-root</code> (legacy shared).</p>
+</section>
+
+<!-- 12 -->
+<section class="slide">
+  <div class="kicker">Recipes</div>
+  <h2>Four ways to run it</h2>
+  <h3>1 · Local development</h3>
+<pre><code><span class="kw">qwen</span> serve                    <span class="cmt"># loopback, no token, Web Shell on :4170</span></code></pre>
+  <h3>2 · Phone on the same Wi-Fi, ad-hoc</h3>
+<pre><code><span class="kw">qwen</span> serve <span class="flg">--local-control</span>     <span class="cmt"># prints a QR — scan it</span></code></pre>
+  <h3>3 · Phone, persistent (survives restarts)</h3>
+<pre><code><span class="kw">qwen</span> serve \
+  <span class="flg">--hostname</span> 192.168.1.20 \
+  <span class="flg">--token</span> <span class="str">"$(cat ~/.qwen-serve-token)"</span> \
+  <span class="flg">--allow-origin</span> http://192.168.1.20:4170</code></pre>
+  <h3>4 · Shared dev box or CI</h3>
+<pre><code><span class="kw">qwen</span> serve <span class="flg">--require-auth</span> <span class="flg">--no-web</span> <span class="flg">--max-sessions</span> <span class="num">4</span>
+<span class="cmt"># token enforced even on loopback; API only; small session cap</span></code></pre>
+</section>
+
+<!-- 13 -->
+<section class="slide">
+  <div class="kicker">Live demo</div>
+  <h2>What we will actually run</h2>
+  <ol>
+    <li><strong>Start it.</strong> <code>qwen serve</code> — note the printed URL, note that no token was needed on loopback.</li>
+    <li><strong>Open the Web Shell</strong> in a browser. Start a session against the local model.</li>
+    <li><strong>Kill the network.</strong> Turn off Wi-Fi mid-run, reconnect, and watch the SSE ring replay what you missed.</li>
+    <li><strong>Phone.</strong> Re-run with <code>--local-control</code>, scan the QR, drive the same daemon from a handset.</li>
+    <li><strong>Prove the token.</strong> Re-run on a LAN IP and show the 401 without <code>Authorization</code>, then success with it.</li>
+    <li><strong>Show the ceiling.</strong> <code>--max-sessions 2</code>, open a third, read the <code>503</code>.</li>
+  </ol>
+  <div class="note">Every step above is a behaviour you can read off <code>--help</code>. Nothing requires a GPU, a cloud account, or a model bigger than the 1.7B you already downloaded.</div>
+</section>
+
+<!-- 14 -->
+<section class="slide">
+  <div class="kicker">Fit for purpose</div>
+  <h2>What to use, and what to leave alone</h2>
+  <div class="grid g2">
+    <div class="card ok">
+      <h4>Show these</h4>
+      <ul>
+        <li>Loopback vs LAN auth model</li>
+        <li>Web Shell + phone access</li>
+        <li>SSE replay surviving a refresh</li>
+        <li><code>--max-sessions</code> returning 503</li>
+        <li><code>--workspace</code> isolation</li>
+        <li><code>--local-control</code> QR pairing</li>
+      </ul>
+    </div>
+    <div class="card bad">
+      <h4>Skip these</h4>
+      <ul>
+        <li><code>--profile hosted-harness</code> + capability digests</li>
+        <li>Agent Host control-plane wiring</li>
+        <li><code>--experimental-paired-engines</code></li>
+        <li><code>--child-heap-mode enforce</code></li>
+        <li><code>--enable-session-shell</code></li>
+        <li>Journal byte-cap tuning</li>
+      </ul>
+    </div>
+  </div>
+  <div class="note">The left column is durable and easy to demonstrate. The right column is private, experimental, or explicitly documented as not-yet-implemented — teaching it would be teaching something that will not survive to next semester.</div>
+</section>
+
+<!-- 15 -->
+<section class="slide">
+  <div class="kicker">Takeaways</div>
+  <h2>Five things to remember</h2>
+  <ol style="font-size:clamp(16px,1.8vw,24px)">
+    <li style="margin:.7em 0"><code>qwen serve</code> turns an agent from a <em>process</em> into a <em>service</em>.</li>
+    <li style="margin:.7em 0"><strong>Loopback is auth-free; every other bind needs a token.</strong> That single rule is the security model.</li>
+    <li style="margin:.7em 0">A static token survives restarts. A <code>--local-control</code> pairing token does not.</li>
+    <li style="margin:.7em 0">Sessions are durable because of the SSE replay ring — that is why a refresh does not lose your work.</li>
+    <li style="margin:.7em 0">It is stage&nbsp;1 experimental. The API shape is real; the internals will move.</li>
+  </ol>
+  <p class="dim" style="margin-top:1.4em">Read the flags yourself — the help text is unusually good and is the source for everything here:</p>
+<pre><code><span class="kw">qwen</span> serve <span class="flg">--help</span></code></pre>
+</section>
+
+</div>
+
+<div id="ov"><div id="ovgrid"></div></div>
+<div id="nav">
+  <button id="prev" title="Previous (←)">&#8249;</button>
+  <button id="grid" title="Overview (O)">&#9638;</button>
+  <button id="next" title="Next (→)">&#8250;</button>
+</div>
+<footer><span id="ttl">qwen serve</span><span id="cnt">1 / 1</span></footer>
+
+<script>
+(function(){
+  var slides=[].slice.call(document.querySelectorAll('.slide')),i=0;
+  var bar=document.getElementById('bar'),cnt=document.getElementById('cnt'),
+      ttl=document.getElementById('ttl'),ov=document.getElementById('ov'),
+      grid=document.getElementById('ovgrid');
+
+  function title(s){
+    var h=s.querySelector('h1,h2');
+    return h?h.textContent.trim():'(untitled)';
+  }
+  function show(n){
+    i=Math.max(0,Math.min(slides.length-1,n));
+    slides.forEach(function(s,k){s.classList.toggle('active',k===i);});
+    bar.style.width=((i+1)/slides.length*100)+'%';
+    cnt.textContent=(i+1)+' / '+slides.length;
+    var t=title(slides[i]);
+    ttl.textContent=(i===0?'qwen serve':t);
+    document.title=(i===0?'qwen serve':t+' — qwen serve');
+    if(location.hash!=='#'+(i+1)) history.replaceState(null,'','#'+(i+1));
+  }
+  function next(){show(i+1)} function prev(){show(i-1)}
+
+  grid.innerHTML=slides.map(function(s,k){
+    return '<div class="thumb" data-k="'+k+'"><div class="n">'+(k+1)+'</div>'+
+           '<div class="t">'+title(s).replace(/</g,'&lt;')+'</div></div>';
+  }).join('');
+  grid.addEventListener('click',function(e){
+    var t=e.target.closest('.thumb'); if(!t)return;
+    show(+t.dataset.k); ov.classList.remove('on');
+  });
+  function toggleOv(){ov.classList.toggle('on');}
+
+  document.getElementById('next').onclick=next;
+  document.getElementById('prev').onclick=prev;
+  document.getElementById('grid').onclick=toggleOv;
+
+  document.addEventListener('keydown',function(e){
+    if(ov.classList.contains('on')&&e.key!=='Escape'&&e.key!=='o'){
+      if(e.key==='ArrowRight'||e.key===' '){next();return;}
+      if(e.key==='ArrowLeft'){prev();return;}
+    }
+    switch(e.key){
+      case 'ArrowRight': case 'ArrowDown': case ' ': case 'PageDown': e.preventDefault(); next(); break;
+      case 'ArrowLeft': case 'ArrowUp': case 'PageUp': e.preventDefault(); prev(); break;
+      case 'Home': e.preventDefault(); show(0); break;
+      case 'End': e.preventDefault(); show(slides.length-1); break;
+      case 'o': case 'O': case 'Escape': toggleOv(); break;
+      case 'f': case 'F':
+        if(document.fullscreenElement)document.exitFullscreen();
+        else document.documentElement.requestFullscreen();
+        break;
+    }
+  });
+
+  // click right/left thirds to navigate, but never on a link or button
+  document.getElementById('deck').addEventListener('click',function(e){
+    if(e.target.closest('a,button,pre,code,input'))return;
+    var x=e.clientX/window.innerWidth;
+    if(x>0.66)next(); else if(x<0.18)prev();
+  });
+
+  // touch swipe
+  var tx=null;
+  document.addEventListener('touchstart',function(e){tx=e.changedTouches[0].clientX;},{passive:true});
+  document.addEventListener('touchend',function(e){
+    if(tx===null)return;
+    var dx=e.changedTouches[0].clientX-tx;
+    if(dx<-50)next(); else if(dx>50)prev();
+    tx=null;
+  },{passive:true});
+
+  var h=parseInt((location.hash||'').replace('#',''),10);
+  show(isNaN(h)?0:h-1);
+})();
+</script>
+</body>
+</html>

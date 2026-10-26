@@ -1,0 +1,44 @@
+# ── Secrets ───────────────────────────────────────────────────────────────────
+# `.env` holds your LiteLLM master key and any cloud API keys.
+# `.env.example` is committed on purpose and must never contain a real key.
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*-token
+.qwen-serve-token*
+
+# ── Model weights ─────────────────────────────────────────────────────────────
+# Multi-gigabyte binaries do not belong in Git. Students download them with
+# scripts/download-models.sh; see docs/offline-models.md.
+*.gguf
+*.safetensors
+*.bin
+*.onnx
+models/
+!docs/models.md
+
+# ── Python ────────────────────────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.ipynb_checkpoints/
+
+# ── Node ──────────────────────────────────────────────────────────────────────
+node_modules/
+
+# ── Editors / OS ──────────────────────────────────────────────────────────────
+.vscode/
+.idea/
+*.swp
+.DS_Store
+Thumbs.db
+
+# ── Workshop working files ────────────────────────────────────────────────────
+# Students create answers.md from the template; the template is committed,
+# their answers are theirs to push on their own branch.
+exercises/answers.md
+/tmp/
+*.log
