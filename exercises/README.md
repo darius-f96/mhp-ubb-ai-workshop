@@ -289,7 +289,16 @@ Then open a pull request against your own fork, and share the link.
 
 ## If you finish early
 
+- **Build the RAG pipeline properly.** [`rag/rag.py`](rag/rag.py) is a complete, dependency-free implementation — chunking, embeddings, cosine retrieval, cited answers, standard library only. Read it, run it, then break it and fix it:
+
+  ```bash
+  python3 rag/rag.py index                      # embed docs/ into vectors
+  python3 rag/rag.py search "context window"    # retrieval only — debug here
+  python3 rag/rag.py ask "what does llama-swap do?"
+  ```
+
+  Use `search` before `ask` when results are bad. It removes the chat model from the picture, so you can tell a *retrieval* problem from a *generation* problem — and that distinction is most of RAG tuning. Then try: change `CHUNK_CHARS` from 1200 to 400 and re-index. Does retrieval get better or worse? Why?
+
 - Add the vision model (`Qwen3-VL-2B`) to llama-swap and have it describe an image. Note how slow CPU vision is.
-- Build a tiny RAG pipeline: embed the `docs/` folder with the nomic model, store vectors in a JSON file, retrieve top-3 for a question, and answer with the chat model. No frameworks — this is ~60 lines of Python and teaches you more than any library.
 - Run `llama-server` with `--parallel 4` and hit it with four concurrent requests. What happens to per-request speed? Why?
 - Try the same model at Q2_K and Q8_0. Score both on the Exercise 2 prompts. Where exactly does quantisation start to hurt?
