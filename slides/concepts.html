@@ -3,91 +3,154 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Self-hosted LLMs — concepts</title>
+<title>Self-hosted LLMs — concepts · MHP</title>
 <style>
   :root{
-    --bg:#0b0e14; --bg2:#121722; --fg:#e6e9ef; --dim:#98a2b3;
-    --acc:#7dd3fc; --acc2:#a78bfa; --ok:#4ade80; --warn:#fbbf24; --bad:#f87171;
-    --line:#232a38; --code:#0f1420;
-    --mono:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,"Liberation Mono",monospace;
-    --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    /* MHP brand, extracted from the corporate template's theme + rendered slides */
+    --b-hi:#363EF8;        /* gradient light end (bottom-left)   */
+    --b-mid:#242ADA;       /* gradient middle                    */
+    --b-lo:#1518BF;        /* gradient dark end (top-right)      */
+    --navy:#000099;        /* accent1 — logo mark, deep text     */
+    --head:#2026D2;        /* heading blue on white              */
+    --peri:#CDD6FF;        /* accent3 — light fills, borders     */
+    --lime:#DDEF03;        /* accent4 — highlight                */
+    --green:#00CC67;       /* accent5 — values, success          */
+    --coral:#F26B43;       /* master accent — warnings           */
+    --ink:#262626;         /* dk1 body text                      */
+    --grey:#575757;        /* dk2 secondary text                 */
+    --bg:#FFFFFF;
+    --code-bg:#0D1030;
+    --code-ink:#E8EBFF;
+    --code-key:#9FB0FF;
+    --code-str:#DDEF03;
+    --code-num:#5BE3A0;
+    --code-cmt:#7C86B8;
+    --font:"Segoe UI","Segoe UI Variable Text",system-ui,-apple-system,"Helvetica Neue",Arial,sans-serif;
+    --mono:ui-monospace,"Cascadia Code","SF Mono",Consolas,"Liberation Mono",monospace;
   }
   *{box-sizing:border-box;margin:0;padding:0}
-  html,body{height:100%;background:var(--bg);color:var(--fg);font-family:var(--sans);
-    -webkit-font-smoothing:antialiased;overflow:hidden}
+  html,body{height:100%;background:#e9ebf0;font-family:var(--font);overflow:hidden;
+    -webkit-font-smoothing:antialiased;color:var(--ink)}
   #deck{height:100%;width:100%;position:relative}
-  .slide{position:absolute;inset:0;display:none;flex-direction:column;justify-content:center;
-    padding:clamp(22px,4.5vh,58px) clamp(22px,5.5vw,88px);overflow-y:auto}
-  .slide.active{display:flex;animation:in .28s ease-out}
-  @keyframes in{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
-  h1{font-size:clamp(28px,5vw,58px);line-height:1.08;letter-spacing:-.02em;margin-bottom:.35em}
-  h2{font-size:clamp(22px,3.4vw,42px);line-height:1.15;letter-spacing:-.015em;margin-bottom:.45em}
-  h3{font-size:clamp(15px,1.6vw,21px);color:var(--acc);margin:.9em 0 .35em;
-    text-transform:uppercase;letter-spacing:.09em;font-weight:600}
-  p,li{font-size:clamp(14px,1.5vw,20px);line-height:1.58;color:var(--fg)}
-  .dim{color:var(--dim)}
-  ul,ol{margin:.35em 0 .35em 1.25em}
-  li{margin:.38em 0}
-  li::marker{color:var(--acc)}
-  strong{color:#fff;font-weight:650}
-  em{color:var(--acc);font-style:normal}
-  code{font-family:var(--mono);font-size:.87em;background:var(--code);
-    border:1px solid var(--line);border-radius:5px;padding:.12em .42em;color:#c9d6e8;white-space:nowrap}
-  pre{background:var(--code);border:1px solid var(--line);border-left:3px solid var(--acc);
-    border-radius:9px;padding:12px 16px;overflow-x:auto;margin:.6em 0;max-width:100%}
-  pre code{background:none;border:none;padding:0;white-space:pre;color:#d6e2f2;
-    font-size:clamp(11px,1.2vw,15.5px);line-height:1.5}
-  .cmt{color:#5f6b7f} .kw{color:var(--acc2)} .str{color:var(--ok)}
-  .num{color:var(--warn)} .flg{color:var(--acc)}
-  .kicker{font-family:var(--mono);font-size:clamp(10px,1.05vw,13.5px);color:var(--acc);
-    text-transform:uppercase;letter-spacing:.16em;margin-bottom:1em}
-  .sub{font-size:clamp(15px,1.85vw,24px);color:var(--dim);line-height:1.5;max-width:36em}
-  .grid{display:grid;gap:clamp(11px,1.4vw,20px);margin-top:.55em}
-  .g2{grid-template-columns:repeat(auto-fit,minmax(min(100%,290px),1fr))}
-  .g3{grid-template-columns:repeat(auto-fit,minmax(min(100%,220px),1fr))}
-  .card{background:var(--bg2);border:1px solid var(--line);border-radius:11px;padding:clamp(12px,1.4vw,19px)}
-  .card h4{font-size:clamp(13.5px,1.35vw,17.5px);margin-bottom:.4em;color:#fff}
-  .card p,.card li{font-size:clamp(12.5px,1.25vw,16.5px);color:var(--dim)}
-  .card.acc{border-left:3px solid var(--acc)} .card.ok{border-left:3px solid var(--ok)}
-  .card.warn{border-left:3px solid var(--warn)} .card.bad{border-left:3px solid var(--bad)}
-  .card.pur{border-left:3px solid var(--acc2)}
-  table{width:100%;border-collapse:collapse;margin:.6em 0;font-size:clamp(11.5px,1.25vw,16.5px)}
-  th,td{text-align:left;padding:.45em .65em;border-bottom:1px solid var(--line);vertical-align:top}
-  th{color:var(--acc);font-family:var(--mono);font-size:.82em;text-transform:uppercase;letter-spacing:.07em}
-  td{color:var(--dim)} td:first-child{color:var(--fg)}
-  td.mono,th.mono{font-family:var(--mono);white-space:nowrap}
-  .diagram{font-family:var(--mono);background:var(--code);border:1px solid var(--line);
-    border-radius:9px;padding:clamp(11px,1.5vw,20px);overflow-x:auto;
-    font-size:clamp(9.5px,1.1vw,14.5px);line-height:1.45;color:#b9c7db;white-space:pre}
-  .note{border-left:3px solid var(--warn);background:rgba(251,191,36,.06);
-    padding:.7em 1.05em;border-radius:0 8px 8px 0;margin:.7em 0;
-    font-size:clamp(12.5px,1.3vw,17.5px);color:#e8dcc0}
-  .note.bad{border-color:var(--bad);background:rgba(248,113,113,.07);color:#f0d4d4}
-  .note.ok{border-color:var(--ok);background:rgba(74,222,128,.06);color:#d3ecd9}
-  .note.acc{border-color:var(--acc);background:rgba(125,211,252,.06);color:#d3e8f2}
-  .pill{display:inline-block;font-family:var(--mono);font-size:.78em;padding:.2em .7em;
-    border-radius:999px;border:1px solid var(--line);background:var(--bg2);color:var(--dim);margin:.15em .2em}
-  .center{text-align:center;align-items:center}
-  .center ul,.center ol{text-align:left;display:inline-block}
-  footer{position:fixed;bottom:0;left:0;right:0;display:flex;justify-content:space-between;
-    align-items:center;padding:9px 18px;font-family:var(--mono);font-size:11.5px;
-    color:#4d5768;background:linear-gradient(transparent,rgba(11,14,20,.95) 45%);z-index:50}
-  #bar{position:fixed;top:0;left:0;height:2px;background:var(--acc);z-index:60;transition:width .25s}
-  #nav{position:fixed;bottom:7px;left:50%;transform:translateX(-50%);display:flex;gap:6px;z-index:60}
-  #nav button{background:var(--bg2);border:1px solid var(--line);color:var(--dim);
-    width:29px;height:25px;border-radius:6px;cursor:pointer;font-size:12.5px;line-height:1}
-  #nav button:hover{border-color:var(--acc);color:var(--acc)}
-  #ov{position:fixed;inset:0;background:rgba(5,7,11,.97);z-index:100;display:none;overflow-y:auto;padding:20px}
+
+  .slide{position:absolute;inset:0;display:none;background:var(--bg);overflow:hidden}
+  .slide.active{display:flex;flex-direction:column;animation:in .25s ease-out}
+  @keyframes in{from{opacity:0}to{opacity:1}}
+
+  /* ── the two MHP content layouts ─────────────────────────────── */
+  /* top band: heading sits in a blue gradient bar, logo right      */
+  .hband{flex:0 0 auto;min-height:clamp(56px,11vh,92px);
+    background:linear-gradient(105deg,var(--b-hi) 0%,var(--b-mid) 45%,var(--b-lo) 100%);
+    display:flex;align-items:center;justify-content:space-between;
+    padding:0 clamp(20px,3.4vw,52px) 0 clamp(22px,3.8vw,58px)}
+  .hband h2{color:#fff;font-size:clamp(17px,2.5vw,31px);font-weight:600;letter-spacing:.01em;line-height:1.2}
+  .logo-w{background:url("data:image/png;base64,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") no-repeat center/contain;
+    height:clamp(34px,6.4vh,58px);aspect-ratio:520/230;flex:0 0 auto}
+  .logo-n{background:url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAANEAAABUCAYAAAAcR9KEAAAKlElEQVR42u2dv64VNxDGz2PwFLzOFS/AG9CkQ1SUiIoKKRLVTYtuinRQBpo0SNENulUAiQKEAgKiE33FF00mnvF4196ze3dGsgT37NrjPz97dmbtPXz69PX4+vVHN3379vdxjuD+uWVE9Owlnz9/Pr59+9ZMHz58OC4tnj5I0Lkm799/PL548Yebvnz5OkT/WrmXl2+6tMPcNEUOT578fjwcHrlp7gB9/vzP2WVE9Owlz549O56dnblpSZCurq6q+kDnmty//1M1HwzoEVIr9+zsh075zE/37t07Pn78+Pjq1avj9+/f1wFRpIzaSrQ2iB48eLAIQOjE27dvJ0QLQiQT2v78/Nxd6ReB6NatX9z8b9z4sQuIS0KE9PLly+EQXVxchHRJiMYnq40XgejmzXM3f0C2RYgwS0WeReY8B83t4ISobypZIItAVMv/4cPfNgkREmznUQLbPCFaF0RIMO8WhQj31vJ/+vRqsxAh4cG/t7TqkBCdzrQbDlEPz9zaIbpz507Ii9PiYo84ExKi0yX0D/t8OEQ9PHNrhwgJDoBeAru710Pv3iDChIa2aEkwydHmrRMXzbrhEPXwzG0Bol6xo0hMKCEaF3pAbAggRi2QRSDq4ZnbCkRwBCwRE0qIxsbv0A9RkDBxDoeoh2duKxBFB7MlMA9GlpsQ9Q8vIFY4FKJenrktQTQ1dtQSE0qIlnmTJPJsinYfClEvz9yWIJrakVHzISFaDqLo619DIerlmdsaRK2xox7lJUT9IYKpdnKIennmtgiRjCPUYkIj3+tKiMY+Fw2HqJdnbosQRWNHU2JCCdGOVqJenrk1QhQd/N5GL8Qkoq7zhGiHz0Q9PXNrhAhwRJwBVuwoGhNCJ0X0SYj6Q4Q3GU7qnevpmVsrRFG3dGmARzqI7vKEaHmIEEQ9eZwI9yBvL7Wc3bBGiCDRTXMydtQSyIvqkxD1hSi6DQX9ush+oh6yVohazDJe32oGJkTLQYR+jQK02Ltz1x0iSPSlUTgSop4/+TLrkhA9evRz9WSeKWkpiABA6wk/fJu7ZROkbPOEqANEUVd19OVS7RpfEqLTpW3tJ5J7yBKiThBN2UgX3eCXEK0PIlgV/4ZyEqI+EPUK0pZeF0qI1gXR4mcs7AmiFq9Oy6EnCdF6INIAJUQDIJq6pcHbQpEQnR4i9I/1UvEQiGrxIQRirytELbGj6EGQCdHpIOIJqN7LxN0hwsHzPd+Z2yJELduLI7GNhGhZiNB3PIs7It0h6v3O3BYhaokdRQ44yThRHKIpp/3ImNGUo8+6QzTqGWtrEEXfj4sM/nxjYfnXfk4K0d27v3bbzbp1iGqxo+ihjwnRziDquZt16xBBvI1d0TwSop1BVMurZTfrdYDIih21HISfEO0IoohnDuXtDSK9NyV6/kJCtEOIIp65KTGirUOk84y6ThOiHUJ06uO31gwRY0dTOjkh2hFEEc/cVNk6RDTrppyOmhDtCKKaZw5HaO0ZopH6JETXBKJRnrmEKCHaBUQjPXMJUUK0C4hGeuYSooRoFxCt4bOVCVFCtGmIRnrmEqKEaBcQjfTMJUQJ0S4gGumZS4gSomsP0WjPXEKUEF17iEZ75hKihOjaQ7TEiUEJUUJ0rSEa7ZlLiBKiVUOE5xlA4qXadu537/6q5jFXInr2ErwkWjsEfcqBFiP1ibzY+v79x+qBIl++fB1Sh1q5l5dvQvnU2qF26MsQiI4pKSkJUUpKQpSSkhClpCREKSkpCVFKSkKUkpIQpaQkRCkpKQlRSkpClJKSEKWkJEQpKSkJUUpKQpSSkhClpCREKSkp0yHiTsqpuwStnZiR3Ze4Dh/BwnZnfO/U24Y9d9cp6ocyUF7kHtaLn26/uroy64S8Pd1RXqmNazs3p+yqhY7QVepdy0Pf4/Uf6xrJU+fDdpg6VmrlRnST/SD1idQF9xUhkp+O7/09HXy/FANXVwrKYH+89ZVtdKgWb6896mB9ke78/Lz4VW/oViqHdbK+BI78tLAuXseVzgSon0UQP98BbQzdSnmgLqVzGabcw7qW2kEK+lGfB8F2sPr94uKiCAD6idfhGkuom3eN7Ad+jK32RUPmi7ocSoTJimDAT4UIjcqZDAkDmwNRKigVZ8OhcVG2/GiwnrXlIR26HOselMtyOMPibxw4+Ls3KRBOdKKEUTf4HIiom5WiExvbATpCV+gMPWU/6Ly8e6wxISc/Sze2uwUR8pB1lG1bAkCCXuqzkm7W5KP7gYAi3xLAcgwVzTl+Mt4bVFGISkrzI8CAQ5dplUVdrFnb6zTdAYSyZKqyHA0EyymtUhYMcyDqcWKN/NhyaWCzfeTqEb1H10sOVGs14iRpQVRa4TihAya9WuJvyJNwWxaE1M2Cwus/rRfLluP7fxBxkKEC3oCbCpFsUHYUB6+16sklPwoRKqvBtDpFDyJ0jC7bm0xK7XRqiDjgrbw4GOSXzGv3QPQA0gO1NF44HnhvFCLZthISOUGWJoMSDBxzpVWtVGdpkckJhXWRY+TgDSKuEJ49OQciNjYr6pkpvKcFInZaKZ/ocwU72WuD0gPzqSFiH3h2vX7ojtzDCa8EUclikLCiDVsh4kojdeLf0N6yn0urDHXD/aUJwGtz6svf5CQs+/pQuonUcza3Zu455pyc2WsDzromYs7pxuHEwN/wf2+lrXVyTV/Lw0Y9ShBh9rXu6zWRTb2ndI2sK1cO/s7r+azTApEcfwSEA1m2m2WGa93kY4MEzoJIm26WiXfQs7QGpmZzeg1NFzUTIOVKIE23uRDpgWaVIwGTNrr0POnZbC5ErSd21q5fO0RyhdUmowcRQNCTDIGUphpBkMAwD/mcXdLN8tZ5qz8nY8JUMusP2iOhzRb+XdqAc1zc9Pq0mD41iKYercuYj/Q86aV6LkSWh81zlnjeubVDJP9PCKi3B5EXqpCWAvKUK5P1nG3pht+1WVczoWsevoNeErVbWgIRDfJZLu6aB8UTdkjNxc16lGalWvCMMMnVay5Ep34mmmJBePdEIJJgyJnbg0i7uEsBYfkooMeoBtbSTXuDaTJ6bc6FxBpTB237eSkaM2qdBeXDnzXAW7xzlvOAAV0LCDaWbFDPVPBM3lNDJEMVNWcNZ++WezyIrOeU1mci60HfS9rcKummLYVam1t99R+IaPdZkNRInAtRrSL8XZdvQeS5arVbtxY74UxlufoJuNV5p4KI+Vt1LZUfvUdbJaWBinbRbTIXIvZdzVqpAa5jYl0gki7DWnwgEjNqhUjaqZhtWAb+DrD5m4bce9i23JnS1JR1wXWWXc32QSfJ9+wwufA3y4w4FURyUEFH6XHFv0vxF+8e1Fv+FpntNYhzIOJE7q2SpZXU0k0/u8+CiDNpbZXhUhqJGU15qJXRcOkN8SLhHkSloJgGVgbh5INsydVZ8ubJf+sBs4Z35zBJaD31u4Kt95Si/t5A7QURzUNvEpdxHOpY040TwyyIQDh+9AJs8nmi9pIhgcC1rW86oBEAKe5FQ7A8qwHwuxeR5+/WC4x0hQOcWrxI1gsNj8Q4Uyl/1qPWnnpSos5eamlX6AYdcR/qSr29/i7d473Qy7pG20/mw3aojT9cE/EQY7xIXWq6Wf3Qcs0/5kRQYhOK94IAAAAASUVORK5CYII=") no-repeat center/contain;
+    height:clamp(30px,5.6vh,50px);aspect-ratio:209/84;flex:0 0 auto}
+
+  /* side band: agenda / section dividers */
+  .sband{position:absolute;left:0;top:0;bottom:0;width:clamp(120px,26vw,330px);
+    background:linear-gradient(160deg,var(--b-mid) 0%,var(--b-hi) 78%,#3E47FF 100%);
+    display:flex;align-items:flex-end;padding:clamp(10px,2vh,20px) clamp(10px,1.6vw,22px)}
+  .sband .copy{color:#fff;font-size:clamp(8px,.85vw,11px);opacity:.92;letter-spacing:.02em}
+  .smain{margin-left:clamp(120px,26vw,330px);flex:1;display:flex;flex-direction:column;
+    padding:clamp(18px,4vh,44px) clamp(24px,4.5vw,72px) clamp(34px,6vh,58px)}
+  .smain .logo-n{position:absolute;top:clamp(14px,3vh,30px);right:clamp(20px,3.4vw,52px)}
+
+  /* shared body area for top-band slides */
+  .body{flex:1;overflow:hidden;padding:clamp(14px,3vh,34px) clamp(24px,4.6vw,74px) clamp(30px,5.4vh,50px);
+    display:flex;flex-direction:column;justify-content:center}
+  .foot{flex:0 0 auto;display:flex;justify-content:space-between;align-items:center;
+    padding:0 clamp(20px,3.4vw,52px) clamp(8px,1.6vh,15px);
+    font-size:clamp(8px,.9vw,11.5px);color:var(--grey)}
+  .foot .pg{font-variant-numeric:tabular-nums}
+
+  /* ── typography ──────────────────────────────────────────────── */
+  h1{color:#fff;font-size:clamp(26px,4.6vw,56px);font-weight:600;line-height:1.16;letter-spacing:.005em}
+  .big-h{color:var(--head);font-size:clamp(24px,4vw,50px);font-weight:400;letter-spacing:.01em;margin-bottom:.4em}
+  h3{color:var(--head);font-size:clamp(13px,1.5vw,19px);font-weight:600;margin:.8em 0 .3em;letter-spacing:.02em}
+  p,li{font-size:clamp(12.5px,1.42vw,19px);line-height:1.5;color:var(--ink)}
+  .dim{color:var(--grey)}
+  .white{color:#fff}
+  strong{font-weight:650}
+  em{color:var(--head);font-style:normal;font-weight:600}
+  .on-blue em{color:var(--lime)}
+  ul{list-style:none;margin:.3em 0}
+  ul li{position:relative;padding-left:1.5em;margin:.42em 0}
+  ul li::before{content:"➤";position:absolute;left:0;top:.06em;color:var(--head);font-size:.82em}
+  .on-blue ul li::before{color:var(--lime)}
+  ol{margin:.3em 0 .3em 1.4em}
+  ol li{margin:.4em 0}
+  code{font-family:var(--mono);font-size:.86em;background:#EEF1FB;border:1px solid var(--peri);
+    border-radius:4px;padding:.1em .4em;color:var(--navy);white-space:nowrap}
+  pre{background:var(--code-bg);border-radius:8px;padding:clamp(9px,1.5vh,16px) clamp(12px,1.5vw,20px);
+    overflow:auto;margin:.5em 0;max-width:100%;border-left:4px solid var(--b-hi)}
+  pre code{background:none;border:none;padding:0;white-space:pre;color:var(--code-ink);
+    font-size:clamp(9.5px,1.06vw,14.5px);line-height:1.5}
+  .k{color:var(--code-key)} .s{color:var(--code-str)} .n{color:var(--code-num)} .c{color:var(--code-cmt)}
+  .w{color:#fff}
+
+  table{width:100%;border-collapse:collapse;margin:.5em 0;font-size:clamp(11px,1.22vw,16.5px)}
+  th,td{text-align:left;padding:.42em .6em;border-bottom:1px solid var(--peri);vertical-align:top}
+  th{color:var(--head);font-weight:600;font-size:.86em;text-transform:uppercase;letter-spacing:.06em}
+  td{color:var(--grey)} td:first-child{color:var(--ink);font-family:var(--mono);font-size:.94em;white-space:nowrap}
+  td b{color:var(--ink)}
+
+  .grid{display:grid;gap:clamp(10px,1.4vw,20px);margin-top:.4em}
+  .g2{grid-template-columns:repeat(auto-fit,minmax(min(100%,280px),1fr))}
+  .g3{grid-template-columns:repeat(auto-fit,minmax(min(100%,210px),1fr))}
+  .card{background:#fff;border:1px solid var(--peri);border-radius:8px;
+    padding:clamp(10px,1.4vw,18px);box-shadow:0 1px 3px rgba(0,0,153,.07)}
+  .card h4{font-size:clamp(12.5px,1.35vw,17.5px);margin-bottom:.35em;color:var(--navy);font-weight:650}
+  .card p,.card li{font-size:clamp(11.5px,1.22vw,16px);color:var(--grey)}
+  .card.acc{border-left:4px solid var(--b-hi)} .card.ok{border-left:4px solid var(--green)}
+  .card.warn{border-left:4px solid var(--coral)} .card.lim{border-left:4px solid var(--lime)}
+  .card.navy{background:var(--navy);border-color:var(--navy)}
+  .card.navy h4{color:#fff} .card.navy p,.card.navy li{color:var(--peri)}
+
+  .callout{border:2px solid var(--b-hi);border-radius:10px;background:#fff;
+    padding:clamp(10px,1.7vh,20px) clamp(14px,2vw,28px);text-align:center;margin:.6em auto;max-width:46em}
+  .callout p{color:var(--head);font-size:clamp(13px,1.5vw,20px);font-weight:600;line-height:1.45}
+  .note{border-left:4px solid var(--lime);background:#FBFCE8;padding:.6em 1em;border-radius:0 6px 6px 0;
+    margin:.55em 0;font-size:clamp(11.5px,1.28vw,17px);color:#4a4d10}
+  .note.warn{border-color:var(--coral);background:#FDF1EC;color:#6b3320}
+  .note.blue{border-color:var(--b-hi);background:#F0F2FF;color:#1c2160}
+  .pill{display:inline-block;font-size:clamp(9px,1vw,13px);padding:.35em 1.4em;border:1.5px solid #fff;
+    border-radius:999px;color:#fff;letter-spacing:.08em;text-transform:uppercase}
+  .diagram{font-family:var(--mono);background:var(--code-bg);border-radius:8px;
+    padding:clamp(10px,1.6vh,18px) clamp(12px,1.5vw,20px);overflow:auto;white-space:pre;
+    font-size:clamp(8.5px,1vw,13.5px);line-height:1.45;color:var(--code-ink);border-left:4px solid var(--b-hi)}
+
+  /* ── title slide ─────────────────────────────────────────────── */
+  .title{background:linear-gradient(115deg,var(--b-hi) 0%,var(--b-mid) 42%,var(--b-lo) 100%);
+    align-items:center;justify-content:center;text-align:center}
+  .title .logo-w{height:clamp(52px,11vh,96px);margin-bottom:clamp(18px,5vh,52px)}
+  .title h1{max-width:22em;margin:0 auto}
+  .title .who{position:absolute;left:0;right:0;bottom:clamp(34px,9vh,84px);
+    display:flex;justify-content:space-between;padding:0 clamp(40px,12vw,190px);
+    color:#fff;font-size:clamp(11px,1.3vw,17px);line-height:1.7;text-align:left}
+  .title .place{position:absolute;bottom:clamp(12px,3.4vh,30px);left:50%;transform:translateX(-50%)}
+  .title .kicker{color:var(--peri);font-size:clamp(10px,1.2vw,15px);letter-spacing:.22em;
+    text-transform:uppercase;margin-bottom:clamp(10px,2.4vh,22px)}
+
+  /* ── chrome ──────────────────────────────────────────────────── */
+  #bar{position:fixed;top:0;left:0;height:3px;background:var(--lime);z-index:60;transition:width .25s}
+  #nav{position:fixed;bottom:6px;left:50%;transform:translateX(-50%);display:flex;gap:5px;z-index:70}
+  #nav button{background:#fff;border:1px solid var(--peri);color:var(--navy);width:28px;height:24px;
+    border-radius:5px;cursor:pointer;font-size:12px;line-height:1}
+  #nav button:hover{background:var(--peri)}
+  #ov{position:fixed;inset:0;background:rgba(13,16,48,.97);z-index:100;display:none;overflow-y:auto;padding:20px}
   #ov.on{display:block}
-  #ovgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(205px,1fr));gap:10px}
-  .thumb{background:var(--bg2);border:1px solid var(--line);border-radius:9px;padding:10px 12px;cursor:pointer}
-  .thumb:hover{border-color:var(--acc)}
-  .thumb .n{font-family:var(--mono);font-size:10.5px;color:var(--acc)}
-  .thumb .t{font-size:13px;color:var(--fg);margin-top:3px;line-height:1.35}
+  #ovgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px}
+  .thumb{background:#fff;border:1px solid var(--peri);border-radius:7px;padding:9px 11px;cursor:pointer}
+  .thumb:hover{border-color:var(--b-hi)}
+  .thumb .n{font-family:var(--mono);font-size:10px;color:var(--head)}
+  .thumb .t{font-size:12.5px;color:var(--ink);margin-top:3px;line-height:1.35}
   @media print{
-    html,body{overflow:visible;background:#fff;color:#000}
-    .slide{display:flex!important;position:relative;page-break-after:always;height:auto;min-height:92vh}
-    footer,#nav,#bar,#ov{display:none!important}
+    html,body{overflow:visible;background:#fff}
+    .slide{display:flex!important;position:relative;page-break-after:always;height:auto;min-height:96vh}
+    #nav,#bar,#ov{display:none!important}
   }
 </style>
 </head>
@@ -95,53 +158,90 @@
 <div id="bar"></div>
 <div id="deck">
 
-<!-- 1 -->
-<section class="slide center">
+<!-- 1 · TITLE -->
+<section class="slide title">
+  <div class="logo-w"></div>
   <div class="kicker">MHP · UBB — AI Workshop</div>
-  <h1>Self-hosted LLMs</h1>
-  <p class="sub">Running your own models, on your own machine, and knowing exactly what that costs you.</p>
-  <p style="margin-top:1.8em"><span class="pill">1h 40m</span><span class="pill">16 GB laptop</span><span class="pill">no GPU required</span></p>
+  <h1>Self-hosted LLMs:<br>concepts &amp; practice</h1>
+  <div class="who">
+    <div>Running your own models,<br>on your own machine</div>
+    <div>16 GB laptop · no GPU<br>1 h 40 min</div>
+  </div>
+  <div class="place"><span class="pill">Place · Date</span></div>
 </section>
 
-<!-- 2 -->
-<section class="slide">
-  <div class="kicker">Why bother</div>
-  <h2>You could just call an API</h2>
-  <p class="dim">And you would get a better model than anything your laptop can run. So why not?</p>
-  <table>
-    <tr><th>Reason</th><th>What it means in practice</th></tr>
-    <tr><td>Privacy</td><td>Your code and documents never leave the machine. Often not a preference — a legal requirement.</td></tr>
-    <tr><td>Cost</td><td>Zero marginal cost per token. An API bill grows forever; a laptop you own does not.</td></tr>
-    <tr><td>No rate limits</td><td>Nothing throttles you at 3 a.m. Run 10 000 documents through an embedder and pay nothing.</td></tr>
-    <tr><td>Availability</td><td>Works on a plane, in a basement, at a venue with broken Wi-Fi. The model is a file.</td></tr>
-    <tr><td>Control</td><td>Exact weights, exact quantisation, exact context window. You can fine-tune.</td></tr>
-    <tr><td><strong>Understanding</strong></td><td>Once you have watched a 1.7B model fail at tool calling, you know what you are buying — and what you give up.</td></tr>
-  </table>
-</section>
-
-<!-- 3 -->
-<section class="slide">
-  <div class="kicker">The honest counter-argument</div>
-  <h2>A local small model is <em>worse</em></h2>
-  <div class="grid g2">
-    <div class="card bad">
-      <h4>It will be</h4>
-      <ul><li>slower</li><li>dumber</li><li>confidently wrong</li></ul>
-    </div>
-    <div class="card ok">
-      <h4>So self-hosting is</h4>
-      <p>a <strong>trade</strong>, not an upgrade.</p>
-      <p style="margin-top:.6em">Knowing <em>when</em> the trade is worth it is the actual skill. That is what today is for.</p>
+<!-- 2 · AGENDA -->
+<section class="slide side">
+  <div class="sband"><span class="copy">© MHP Management- und IT-Beratung GmbH</span></div>
+  <div class="smain">
+    <div class="logo-n"></div>
+    <h2 class="big-h">AGENDA</h2>
+    <div class="grid g2">
+      <div>
+        <ul>
+          <li><strong>01</strong>&nbsp; Why self-host at all</li>
+          <li><strong>02</strong>&nbsp; The five-layer stack</li>
+          <li><strong>03</strong>&nbsp; Weights: GGUF, quantisation, licences</li>
+          <li><strong>04</strong>&nbsp; Engines: llama.cpp vs vLLM</li>
+          <li><strong>05</strong>&nbsp; The OpenAI-compatible API</li>
+        </ul>
+      </div>
+      <div>
+        <ul>
+          <li><strong>06</strong>&nbsp; llama-swap, config line by line</li>
+          <li><strong>07</strong>&nbsp; LiteLLM, config line by line</li>
+          <li><strong>08</strong>&nbsp; Context, KV cache, and RAM</li>
+          <li><strong>09</strong>&nbsp; Tool calling &amp; RAG</li>
+          <li><strong>10</strong>&nbsp; Honest expectations</li>
+        </ul>
+      </div>
     </div>
   </div>
-  <div class="note acc">Everything after this slide is about making the trade deliberately instead of by accident.</div>
+  <div class="foot" style="margin-left:clamp(120px,26vw,330px)"><span></span><span class="pg"></span></div>
 </section>
 
-<!-- 4 -->
+<!-- 3 · WHY -->
 <section class="slide">
-  <div class="kicker">The mental model</div>
-  <h2>Five layers</h2>
-  <div class="diagram">┌───────────────────────────────────────────────────────────────┐
+  <header class="hband"><h2>You could just call an API</h2><div class="logo-w"></div></header>
+  <div class="body">
+    <table>
+      <tr><th>Reason</th><th>What it means in practice</th></tr>
+      <tr><td>Privacy</td><td>Your code and documents never leave the machine. Often not a preference — a legal requirement.</td></tr>
+      <tr><td>Cost</td><td>Zero marginal cost per token. An API bill grows forever; a laptop you own does not.</td></tr>
+      <tr><td>No rate limits</td><td>Nothing throttles you at 3 a.m. Run 10 000 documents through an embedder and pay nothing.</td></tr>
+      <tr><td>Availability</td><td>Works on a plane, in a basement, at a venue with broken Wi-Fi. <b>The model is a file.</b></td></tr>
+      <tr><td>Control</td><td>Exact weights, exact quantisation, exact context window. You can fine-tune.</td></tr>
+      <tr><td><b>Understanding</b></td><td>Once you have watched a 1.7B model fail at tool calling, you know what you are buying — and what you give up.</td></tr>
+    </table>
+  </div>
+  <div class="foot"><span>© MHP Management- und IT-Beratung GmbH</span><span class="pg"></span></div>
+</section>
+
+<!-- 4 · HONEST -->
+<section class="slide">
+  <header class="hband"><h2>The honest counter-argument</h2><div class="logo-w"></div></header>
+  <div class="body">
+    <div class="grid g2">
+      <div class="card warn">
+        <h4>A local small model will be</h4>
+        <ul><li>slower</li><li>dumber</li><li>confidently wrong</li></ul>
+      </div>
+      <div class="card acc">
+        <h4>So self-hosting is</h4>
+        <p>a <strong>trade</strong>, not an upgrade.</p>
+        <p style="margin-top:.5em">Knowing <em>when</em> the trade is worth it is the actual skill. That is what today is for.</p>
+      </div>
+    </div>
+    <div class="callout" style="margin-top:1.2em"><p>Everything after this slide is about making the trade deliberately, instead of by accident.</p></div>
+  </div>
+  <div class="foot"><span>© MHP Management- und IT-Beratung GmbH</span><span class="pg"></span></div>
+</section>
+
+<!-- 5 · FIVE LAYERS -->
+<section class="slide">
+  <header class="hband"><h2>Five layers — the mental model</h2><div class="logo-w"></div></header>
+  <div class="body">
+    <div class="diagram">┌───────────────────────────────────────────────────────────────┐
 │ 5. CLIENT        Qwen Code · OpenCode · your Python script    │
 │                  "do something useful with the model"         │
 ├───────────────────────────────────────────────────────────────┤
@@ -158,434 +258,618 @@
 │ 1. WEIGHTS       .gguf files · safetensors · Hugging Face     │
 │                  a few GB of numbers on your disk             │
 └───────────────────────────────────────────────────────────────┘</div>
-  <p class="dim" style="margin-top:.7em">Every tool today lives in exactly one box. If you remember one slide, remember this one.</p>
+    <p class="dim" style="margin-top:.7em">Every tool today lives in exactly one box. <strong>If you remember one slide, remember this one.</strong></p>
+  </div>
+  <div class="foot"><span>© MHP Management- und IT-Beratung GmbH</span><span class="pg"></span></div>
 </section>
 
-<!-- 5 -->
+<!-- 6 · BUILD ORDER -->
 <section class="slide">
-  <div class="kicker">Build order</div>
-  <h2>You do not need all five</h2>
-  <div class="grid g2">
-    <div class="card ok">
-      <h4>Minimum working setup</h4>
-      <p>Layers <strong>1, 2 and 5</strong> — a model file, an engine, and something to talk to it.</p>
+  <header class="hband"><h2>You do not need all five</h2><div class="logo-w"></div></header>
+  <div class="body">
+    <div class="grid g2">
+      <div class="card ok">
+        <h4>Minimum working setup</h4>
+        <p>Layers <strong>1, 2 and 5</strong> — a model file, an engine, and something to talk to it.</p>
 <pre><code>weights → llama.cpp → curl</code></pre>
+      </div>
+      <div class="card acc">
+        <h4>Layers 3 and 4 are conveniences</h4>
+        <p>They pay off once you have <em>more than one model</em> or <em>more than one client</em>.</p>
+      </div>
     </div>
-    <div class="card acc">
-      <h4>Layers 3 and 4 are conveniences</h4>
-      <p>They pay off once you have <em>more than one model</em> or <em>more than one client</em>.</p>
-    </div>
+    <div class="note warn">Adding a layer you do not yet need is how people end up debugging a proxy at 2 a.m. for a model they could have run directly. <strong>Build bottom-up, and verify each layer before adding the next.</strong></div>
   </div>
-  <div class="note bad">Adding a layer you do not yet need is how people end up debugging a proxy at 2 a.m. for a model they could have run directly. Build bottom-up, and verify each layer before adding the next.</div>
+  <div class="foot"><span>© MHP Management- und IT-Beratung GmbH</span><span class="pg"></span></div>
 </section>
 
-<!-- 6 -->
+<!-- 7 · WEIGHTS -->
 <section class="slide">
-  <div class="kicker">Layer 1 · weights</div>
-  <h2>A model is a file of numbers</h2>
-  <p>Genuinely all it is: a large tensor of floating-point parameters, plus metadata describing how to arrange them.</p>
-  <div class="grid g2" style="margin-top:.8em">
-    <div class="card">
-      <h4><code>safetensors</code></h4>
-      <p>The native format. Full precision, large. Needs PyTorch or vLLM to run.</p>
+  <header class="hband"><h2>Layer 1 · a model is a file of numbers</h2><div class="logo-w"></div></header>
+  <div class="body">
+    <div class="grid g2">
+      <div class="card">
+        <h4><code>safetensors</code></h4>
+        <p>The native format. Full precision, large. Needs PyTorch or vLLM to run.</p>
+      </div>
+      <div class="card acc">
+        <h4><code>GGUF</code> ← what you will use</h4>
+        <p>One self-contained file for llama.cpp: weights <em>plus</em> the tokenizer <em>plus</em> the chat template. Usually quantised.</p>
+      </div>
     </div>
-    <div class="card acc">
-      <h4><code>GGUF</code> ← what you will use</h4>
-      <p>One self-contained file for llama.cpp: weights <em>plus</em> the tokenizer <em>plus</em> the chat template. Usually quantised.</p>
-    </div>
+    <h3>Where they come from</h3>
+    <p><strong>Hugging Face</strong> is the de facto registry — think npm or Docker Hub, for models. Repos are <code>owner/name</code>; quantised re-uploads end in <code>-GGUF</code>.</p>
+    <div class="note blue">Trust order for a GGUF: the <strong>author's own</strong> repo → <code>ggml-org</code> (the llama.cpp team) → <code>unsloth</code> / <code>bartowski</code>.</div>
   </div>
-  <h3>Where they come from</h3>
-  <p><strong>Hugging Face</strong> is the de facto registry — think npm or Docker Hub, for models. Also: Ollama's library, models.dev (for <em>API</em> models), vendor sites.</p>
+  <div class="foot"><span>© MHP Management- und IT-Beratung GmbH</span><span class="pg"></span></div>
 </section>
 
-<!-- 7 -->
+<!-- 8 · QUANTISATION -->
 <section class="slide">
-  <div class="kicker">Layer 1 · quantisation</div>
-  <h2>Compressing the numbers</h2>
-  <p>A model trained at 16 bits per weight can run at 4 bits with modest quality loss — <strong>4× smaller</strong>, and on a CPU often <em>faster</em>, because you move less data.</p>
-  <table>
-    <tr><th class="mono">Suffix</th><th>Bits</th><th>Quality</th><th>Use it when</th></tr>
-    <tr><td class="mono">Q8_0</td><td>8</td><td>Near-lossless</td><td>You have RAM to spare</td></tr>
-    <tr><td class="mono">Q6_K</td><td>6</td><td>Excellent</td><td>Good default on 16 GB</td></tr>
-    <tr><td class="mono">Q5_K_M</td><td>5</td><td>Very good</td><td>Balancing act</td></tr>
-    <tr><td class="mono"><strong>Q4_K_M</strong></td><td><strong>4</strong></td><td><strong>Good</strong></td><td><strong>← the workshop default</strong></td></tr>
-    <tr><td class="mono">Q3_K_M</td><td>3</td><td>Noticeably worse</td><td>Desperate for RAM</td></tr>
-    <tr><td class="mono">Q2_K, IQ2_*</td><td>2</td><td>Poor</td><td>Demos of what quantisation destroys</td></tr>
-  </table>
-  <div class="note">Rule of thumb: <strong>RAM for weights ≈ file size + 10–20%.</strong></div>
+  <header class="hband"><h2>Layer 1 · quantisation: compressing the numbers</h2><div class="logo-w"></div></header>
+  <div class="body">
+    <p>A model trained at 16 bits per weight can run at 4 bits with modest quality loss — <strong>4× smaller</strong>, and on a CPU often <em>faster</em>, because you move less data.</p>
+    <table>
+      <tr><th>Suffix</th><th>Bits</th><th>Quality</th><th>Use it when</th></tr>
+      <tr><td>Q8_0</td><td>8</td><td>Near-lossless</td><td>You have RAM to spare</td></tr>
+      <tr><td>Q6_K</td><td>6</td><td>Excellent</td><td>Good default on 16 GB</td></tr>
+      <tr><td>Q5_K_M</td><td>5</td><td>Very good</td><td>Balancing act</td></tr>
+      <tr><td><b>Q4_K_M</b></td><td><b>4</b></td><td><b>Good</b></td><td><b>← the workshop default</b></td></tr>
+      <tr><td>Q3_K_M</td><td>3</td><td>Noticeably worse</td><td>Desperate for RAM</td></tr>
+      <tr><td>Q2_K, IQ2_*</td><td>2</td><td>Poor</td><td>Demos of what quantisation destroys</td></tr>
+    </table>
+    <div class="callout"><p>Rule of thumb: RAM for weights ≈ file size + 10–20%</p></div>
+  </div>
+  <div class="foot"><span>© MHP Management- und IT-Beratung GmbH</span><span class="pg"></span></div>
 </section>
 
-<!-- 8 -->
+<!-- 9 · NAMING -->
 <section class="slide">
-  <div class="kicker">Layer 1 · naming</div>
-  <h2>Reading a Hugging Face repo id</h2>
+  <header class="hband"><h2>Layer 1 · reading a repo id — and the case trap</h2><div class="logo-w"></div></header>
+  <div class="body">
 <pre><code>ggml-org / Qwen3-4B-GGUF  /  Qwen3-4B-Q4_K_M.gguf
    │           │                    │
  owner      repo                 the file
         (quantised re-uploads
          end in -GGUF)</code></pre>
-  <h3>Who to trust for a GGUF</h3>
-  <ol>
-    <li>The <strong>model author's own</strong> GGUF repo (<code>Qwen/…-GGUF</code>)</li>
-    <li><strong><code>ggml-org</code></strong> — the llama.cpp team</li>
-    <li><strong><code>unsloth</code></strong> or <strong><code>bartowski</code></strong> — reliable community quantisers</li>
-  </ol>
-  <div class="note bad">Filenames are case-sensitive and conventions differ: <code>ggml-org</code> uses <code>Qwen3-1.7B-Q4_K_M.gguf</code> while <code>Qwen</code> uses lowercase <code>qwen2.5-coder-1.5b-instruct-q4_k_m.gguf</code>. Copy them exactly — a retyped name is a 404.</div>
-</section>
-
-<!-- 9 -->
-<section class="slide">
-  <div class="kicker">Layer 1 · licences</div>
-  <h2>"Open weights" is not one thing</h2>
-  <div class="grid g3">
-    <div class="card ok">
-      <h4>Permissive</h4>
-      <p>Apache 2.0 / MIT. Use commercially, no conditions.</p>
-      <p style="margin-top:.5em">SmolLM, Granite 4.0, nomic-embed, bge, LFM2.5</p>
-    </div>
-    <div class="card warn">
-      <h4>Qwen licence</h4>
-      <p>Free including commercial, but has an acceptable-use policy and registration terms at very large scale.</p>
-    </div>
-    <div class="card bad">
-      <h4>Gated</h4>
-      <p>Log in and click through a licence first. <code>hf download</code> fails with <strong>401</strong> until you do.</p>
-      <p style="margin-top:.5em">Meta Llama, Mistral Ministral</p>
+    <div class="note warn"><strong>Filenames are case-sensitive and conventions differ per owner.</strong> <code>ggml-org</code> uses <code>Qwen3-1.7B-Q4_K_M.gguf</code>; <code>Qwen</code> uses lowercase <code>qwen2.5-coder-1.5b-instruct-q4_k_m.gguf</code>. A retyped name is a 404 — copy exactly.</div>
+    <h3>Licences are not uniform either</h3>
+    <div class="grid g3">
+      <div class="card ok"><h4>Permissive</h4><p>Apache 2.0 / MIT. SmolLM, Granite 4.0, nomic-embed, bge, LFM2.5</p></div>
+      <div class="card lim"><h4>Qwen licence</h4><p>Free incl. commercial, with an acceptable-use policy</p></div>
+      <div class="card warn"><h4>Gated</h4><p>Log in + accept a licence first, or <code>hf download</code> fails with 401. Meta Llama, Mistral</p></div>
     </div>
   </div>
-  <div class="note">For a workshop, prefer ungated permissive models. No student should spend ten minutes on a licence form — which is one reason Qwen3 and SmolLM are the defaults here.</div>
+  <div class="foot"><span>© MHP Management- und IT-Beratung GmbH</span><span class="pg"></span></div>
 </section>
 
-<!-- 10 -->
+<!-- 10 · ENGINES -->
 <section class="slide">
-  <div class="kicker">Layer 2 · engines</div>
-  <h2>llama.cpp vs vLLM</h2>
-  <div class="grid g2">
-    <div class="card acc">
-      <h4>llama.cpp</h4>
-      <p>C/C++, no dependencies. Runs on <strong>anything</strong> — CPU, Apple Metal, NVIDIA, AMD, a phone. Uses GGUF.</p>
-      <p style="margin-top:.6em"><strong>This is the engine for your laptop</strong>, and what the whole workshop is built on.</p>
-    </div>
-    <div class="card pur">
-      <h4>vLLM</h4>
-      <p>Python, built for <strong>throughput on GPUs</strong>. Headline feature is PagedAttention — it manages KV cache like an OS manages virtual memory, so it batches many concurrent requests efficiently.</p>
-      <p style="margin-top:.6em;color:var(--warn)">On a CPU it is not worth your time. The image alone is <strong>10.31 GB</strong>.</p>
-    </div>
+  <header class="hband"><h2>Layer 2 · engines: llama.cpp vs vLLM</h2><div class="logo-w"></div></header>
+  <div class="body">
+    <table>
+      <tr><th></th><th>llama.cpp</th><th>vLLM</th></tr>
+      <tr><td>Language</td><td>C/C++, no dependencies</td><td>Python + CUDA kernels</td></tr>
+      <tr><td>Hardware</td><td><b>CPU, Metal, any GPU, a phone</b></td><td>NVIDIA GPU (best)</td></tr>
+      <tr><td>Format</td><td>GGUF</td><td>safetensors</td></tr>
+      <tr><td>Strength</td><td>Runs everywhere, one user</td><td>Many concurrent users — PagedAttention</td></tr>
+      <tr><td>Install weight</td><td>~100 MB binary</td><td><b>10.31 GB</b> GPU image</td></tr>
+      <tr><td><b>Laptop, no GPU</b></td><td><b>Yes ← you</b></td><td><b>No</b></td></tr>
+    </table>
+    <div class="note">vLLM's CPU image exists (<code>vllm/vllm-openai-cpu</code>) but is the wrong tool here: no Apple Silicon build, <code>avx2</code>-only CPUs get "limited features", and its whole design pays off only when many requests share a GPU.</div>
   </div>
-  <table style="margin-top:.8em">
-    <tr><th></th><th>llama.cpp</th><th>vLLM</th></tr>
-    <tr><td>Hardware</td><td>CPU, Metal, any GPU</td><td>NVIDIA GPU (best)</td></tr>
-    <tr><td>Format</td><td>GGUF</td><td>safetensors</td></tr>
-    <tr><td>Strength</td><td>Runs everywhere, one user</td><td>Many concurrent users</td></tr>
-    <tr><td><strong>Laptop, no GPU</strong></td><td><strong>Yes</strong></td><td><strong>No</strong></td></tr>
-  </table>
+  <div class="foot"><span>© MHP Management- und IT-Beratung GmbH</span><span class="pg"></span></div>
 </section>
 
-<!-- 11 -->
+<!-- 11 · OPENAI API -->
 <section class="slide">
-  <div class="kicker">The most important slide</div>
-  <h2>The OpenAI-compatible API</h2>
-  <p>A de facto standard: a couple of HTTP endpoints with a known JSON shape.</p>
+  <header class="hband"><h2>The most important slide: one API for everything</h2><div class="logo-w"></div></header>
+  <div class="body">
 <pre><code>curl http://127.0.0.1:8080/v1/chat/completions \
-  -H <span class="str">"Content-Type: application/json"</span> \
-  -d <span class="str">'{
+  -H <span class="s">"Content-Type: application/json"</span> \
+  -d <span class="s">'{
     "model": "qwen3-1.7b",
     "messages": [{"role":"user","content":"Say hello in one word."}]
   }'</span></code></pre>
-  <div class="note ok">Because llama.cpp, vLLM, LiteLLM, llama-swap and Ollama all speak it, <strong>any client works with any server</strong>. Your coding agent does not know or care whether the model behind that URL is a 1.7B file on your laptop or a frontier model in a data centre.<br><br>Swap the URL, keep the tool.</div>
-</section>
-
-<!-- 12 -->
-<section class="slide">
-  <div class="kicker">Layer 2 · endpoints</div>
-  <h2>The ones you will actually use</h2>
-  <table>
-    <tr><th class="mono">Endpoint</th><th>Purpose</th></tr>
-    <tr><td class="mono">GET /v1/models</td><td>What is available. <strong>Your first debugging tool</strong> — if this fails, nothing else will work.</td></tr>
-    <tr><td class="mono">POST /v1/chat/completions</td><td>Chat, and tool calling. The main one.</td></tr>
-    <tr><td class="mono">POST /v1/embeddings</td><td>Text → vectors, for search and RAG.</td></tr>
-    <tr><td class="mono">POST /v1/rerank</td><td>Re-score search results.</td></tr>
-    <tr><td class="mono">GET /health</td><td>Is it up?</td></tr>
-  </table>
-  <div class="note acc">For the rest of today, whenever something does not work, the first question is always:<br><strong><em>can I curl <code>/v1/models</code> on it?</em></strong></div>
-</section>
-
-<!-- 13 -->
-<section class="slide">
-  <div class="kicker">Layer 3 · managers</div>
-  <h2>You have one slot and several models</h2>
-  <p>Loading a model takes seconds and costs gigabytes. Four <code>llama-server</code> processes competing for 16 GB is not going to work.</p>
-  <div class="card acc" style="margin-top:.8em">
-    <h4>llama-swap</h4>
-    <p>Presents <strong>one API</strong> and starts/stops engines behind it on demand. Ask for model A, it boots A. Ask for B, it unloads A and boots B. Idle models die after a TTL and your RAM comes back.</p>
+    <div class="callout"><p>llama.cpp, vLLM, LiteLLM, llama-swap and Ollama all speak it — so <strong>any client works with any server</strong>.<br>Swap the URL, keep the tool.</p></div>
+    <table>
+      <tr><th>Endpoint</th><th>Purpose</th></tr>
+      <tr><td>GET /v1/models</td><td><b>Your first debugging tool.</b> If this fails, nothing else works.</td></tr>
+      <tr><td>POST /v1/chat/completions</td><td>Chat and tool calling — the main one</td></tr>
+      <tr><td>POST /v1/embeddings</td><td>Text → vectors, for search and RAG</td></tr>
+      <tr><td>GET /health</td><td>Is it up?</td></tr>
+    </table>
   </div>
-  <div class="diagram" style="margin-top:.9em">:8090  ──┬──> llama-server  (chat)    ← loaded now
+  <div class="foot"><span>© MHP Management- und IT-Beratung GmbH</span><span class="pg"></span></div>
+</section>
+
+<!-- 12 · MANAGERS CONCEPT -->
+<section class="slide">
+  <header class="hband"><h2>Layer 3 · one slot, several models</h2><div class="logo-w"></div></header>
+  <div class="body">
+    <p>Loading a model costs gigabytes and seconds. Four <code>llama-server</code> processes fighting over 16 GB will not work.</p>
+    <div class="diagram" style="margin-top:.7em">:8090  ──┬──> llama-server  (chat)    ← loaded now
          ├──> llama-server  (coder)   ← starts on demand
          ├──> llama-server  (embed)   ← starts on demand
          └──> llama-server  (tiny)    ← starts on demand</div>
-  <p class="dim" style="margin-top:.6em">This is what makes a <em>specialised</em> local setup practical — and specialisation is how small models become genuinely useful.</p>
-</section>
-
-<!-- 14 -->
-<section class="slide">
-  <div class="kicker">Layer 4 · gateways</div>
-  <h2>Several backends, one endpoint</h2>
-  <p>You have your local llama-swap, maybe a colleague's GPU box, maybe OpenRouter, maybe Google's free tier. Different URLs, different keys.</p>
-  <div class="card acc" style="margin-top:.6em">
-    <h4>LiteLLM puts one endpoint in front of all of it</h4>
-    <ul>
-      <li><strong>Routing</strong> — <code>fast-model</code> local, <code>big-model</code> cloud</li>
-      <li><strong>Fallback</strong> — local died? Retry on the cloud. <em>This is what makes a workshop survivable.</em></li>
-      <li><strong>Keys and budgets</strong></li>
-      <li><strong>Uniform API</strong> — 100+ providers behind OpenAI-shaped endpoints</li>
-    </ul>
+    <p style="margin-top:.7em"><strong>llama-swap</strong> presents one API and starts/stops engines behind it. Idle models die after a TTL and your RAM comes back. That is what makes <em>specialists</em> practical on a laptop.</p>
   </div>
-  <div class="note">Clients talk to <code>:4000</code> and never learn where the tokens came from.</div>
+  <div class="foot"><span>© MHP Management- und IT-Beratung GmbH</span><span class="pg"></span></div>
 </section>
 
-<!-- 15 -->
+<!-- 13 · LLAMA-SWAP CONFIG -->
 <section class="slide">
-  <div class="kicker">Layer 5 · clients</div>
-  <h2>The point of all this</h2>
-  <div class="grid g2">
-    <div class="card acc">
-      <h4>Qwen Code</h4>
-      <p>Alibaba's terminal agent. Reads your repo, edits files, runs commands.</p>
-      <p style="margin-top:.5em">Has a <code>qwen serve</code> mode that turns it into a daemon with a browser UI.</p>
-    </div>
-    <div class="card pur">
-      <h4>OpenCode</h4>
-      <p>Similar terminal agent, provider-agnostic by design. Ships a model catalogue so hosted providers need no config.</p>
-    </div>
+  <header class="hband"><h2>llama-swap · the config, whole</h2><div class="logo-w"></div></header>
+  <div class="body">
+<pre><code><span class="k">healthCheckTimeout</span>: <span class="n">300</span>     <span class="c"># seconds to wait for an engine to become healthy</span>
+<span class="k">startPort</span>: <span class="n">18080</span>            <span class="c"># first port handed out to engines</span>
+<span class="k">globalTTL</span>: <span class="n">0</span>                <span class="c"># 0 = never auto-unload; per-model ttl wins</span>
+
+<span class="k">macros</span>:                     <span class="c"># text substitution. unknown macro = HARD error</span>
+  <span class="k">model-dir</span>: <span class="s">"/home/YOURNAME/models"</span>
+  <span class="k">llama-server-path</span>: <span class="s">"llama-server"</span>
+  <span class="k">common-args</span>: <span class="s">"--host 127.0.0.1 --port ${PORT} --jinja"</span>
+
+<span class="k">models</span>:
+  <span class="k">chat</span>:                     <span class="c"># the id clients put in "model"</span>
+    <span class="k">cmd</span>: >
+      ${llama-server-path}
+      -m ${model-dir}/Qwen3-1.7B-Q4_K_M.gguf
+      ${common-args} -ngl <span class="n">0</span> -c <span class="n">8192</span> -np <span class="n">1</span>
+    <span class="k">ttl</span>: <span class="n">600</span>                <span class="c"># unload after 10 min idle → RAM returns</span>
+  <span class="k">embed</span>:
+    <span class="k">cmd</span>: >
+      ${llama-server-path}
+      -m ${model-dir}/nomic-embed-text-v1.5.Q8_0.gguf
+      ${common-args} -ngl <span class="n">0</span> -c <span class="n">2048</span> --embedding
+    <span class="k">ttl</span>: <span class="n">600</span></code></pre>
+    <p class="dim">Full file in the repo: <code>configs/llama-swap/config.yaml</code></p>
   </div>
-  <p style="margin-top:.9em">Both are configured by giving them a <strong>base URL</strong> and a <strong>model name</strong>. Point them at <code>http://127.0.0.1:4000</code> and they use whatever LiteLLM routes to.</p>
-  <div class="note ok">Configuring <em>both</em> takes ten minutes and teaches the real lesson: the stack is the durable investment, the client is interchangeable.</div>
+  <div class="foot"><span>© MHP Management- und IT-Beratung GmbH</span><span class="pg"></span></div>
 </section>
 
-<!-- 16 -->
+<!-- 14 · LLAMA-SWAP PARAMS -->
 <section class="slide">
-  <div class="kicker">Concepts · tokens</div>
-  <h2>Models do not see words</h2>
-  <p>They see <strong>tokens</strong> — chunks of text. Everything is measured in them: context size, price, speed.</p>
-  <div class="card acc" style="margin-top:.8em">
-    <h4>Mental model</h4>
-    <p style="font-family:var(--mono);font-size:clamp(14px,1.6vw,21px)">1 token ≈ 4 characters ≈ 0.75 English words</p>
+  <header class="hband"><h2>llama-swap · what each part does</h2><div class="logo-w"></div></header>
+  <div class="body">
+    <table>
+      <tr><th>Key</th><th>Why it matters</th></tr>
+      <tr><td>models</td><td>The <b>only required</b> top-level key. Each entry's key is the public model id.</td></tr>
+      <tr><td>cmd</td><td>The <b>only required</b> per-model key — the command that starts the engine.</td></tr>
+      <tr><td>${PORT}</td><td>Auto-assigned free port. <b>Reserved</b>, like <code>${MODEL_ID}</code> and <code>${PID}</code>.</td></tr>
+      <tr><td>proxy</td><td>Defaults to <code>http://localhost:${PORT}</code>. Omit it when <code>cmd</code> uses <code>${PORT}</code>. A mismatch here is <b>the #1 llama-swap failure</b>.</td></tr>
+      <tr><td>macros</td><td>Your own substitutions. <code>${HOME}</code> is <b>not</b> a macro — env vars are not expanded, and an unknown name fails loudly at startup.</td></tr>
+      <tr><td>ttl</td><td>Idle seconds before unload. <code>0</code> = keep resident. This is the RAM reclamation.</td></tr>
+      <tr><td>healthCheckTimeout</td><td>Default <b>120 s</b>, minimum 15. Too short for a cold load that must download weights.</td></tr>
+      <tr><td>aliases</td><td>Extra names — e.g. impersonate <code>gpt-4o-mini</code> so existing tooling works unchanged.</td></tr>
+    </table>
+    <div class="note blue">Validate before running: <code>llama-swap --config config.yaml --validate</code> (v252+). Edit live with <code>--watch-config</code>.</div>
   </div>
-<pre style="margin-top:.9em"><code><span class="cmt"># 19 characters ≈ 5 tokens</span>
-echo -n <span class="str">"The quick brown fox"</span> | wc -c</code></pre>
-  <p class="dim" style="margin-top:.6em">A 500-word document is roughly 650 tokens. A large source file can be 3 000. This is why context runs out faster than you expect.</p>
+  <div class="foot"><span>© MHP Management- und IT-Beratung GmbH</span><span class="pg"></span></div>
 </section>
 
-<!-- 17 -->
+<!-- 15 · LLAMA-SWAP PRODUCTION -->
 <section class="slide">
-  <div class="kicker">Concepts · context</div>
-  <h2>The context window</h2>
-  <p>The maximum tokens the model can attend to at once — <strong>your prompt + its reply + the whole conversation so far</strong>.</p>
-  <div class="note bad">Exceed it and the start <em>silently</em> falls off the front. There is no error. The agent just forgets what you told it twenty messages ago.</div>
-  <h3>This is the hardest constraint on a laptop</h3>
-  <p>Context is not free. The engine allocates a <strong>KV cache</strong> that grows <em>linearly</em> with context size.</p>
-  <div class="card warn" style="margin-top:.7em">
-    <p>A model file is <strong>1.3 GB</strong>. At a 128k context, the KV cache can be <strong>larger than the model</strong>.</p>
-  </div>
-  <p style="margin-top:.8em"><strong>Default small.</strong> Start at <code>-c 4096</code> and raise it only when you hit the wall.</p>
-</section>
-
-<!-- 18 -->
-<section class="slide">
-  <div class="kicker">Concepts · context, measured</div>
-  <h2>Two traps, measured not guessed</h2>
-  <h3>1 · <code>-c 0</code> means "the model's own context", not zero</h3>
-  <p class="dim">That is the default. On a 128k model it allocates a 128k KV cache and takes your laptop with it. Always set <code>-c</code> explicitly.</p>
-  <h3>2 · Parallel slots eat your context</h3>
-  <p class="dim">Measured on llama.cpp build 9761, same model each run:</p>
-  <table>
-    <tr><th class="mono">Flags</th><th class="mono">n_ctx_seq</th><th>What happened</th></tr>
-    <tr><td class="mono">-c 4096 <span class="dim">(auto)</span></td><td class="mono"><strong>4096</strong></td><td>auto enables a <em>unified</em> KV cache; slots share one pool</td></tr>
-    <tr><td class="mono">-c 4096 -np 1</td><td class="mono"><strong>4096</strong></td><td>one slot, full context</td></tr>
-    <tr><td class="mono">-c 4096 -np 4</td><td class="mono"><strong>1024</strong></td><td>explicit parallel <strong>divides</strong> it: 4096 ÷ 4</td></tr>
-  </table>
-  <div class="note">Typing <code>-np 4</code> yourself gives each request a <em>quarter</em> of the context you asked for. Want four slots at 4096 each? Ask for <code>-c 16384 -np 4</code>.<br><br><strong>For this workshop: use <code>-np 1</code>.</strong> You are one person.</div>
-</section>
-
-<!-- 19 -->
-<section class="slide">
-  <div class="kicker">Concepts · memory</div>
-  <h2>Realistic budgets on 16 GB</h2>
-  <p class="dim">Your OS, browser, Docker and IDE already eat 6–8 GB. Treat <strong>~6 GB</strong> as your total model budget.</p>
-  <table>
-    <tr><th>Configuration</th><th>Weights</th><th>KV</th><th>Total</th><th>Verdict</th></tr>
-    <tr><td>Qwen3-1.7B Q4, <code>-c 8192</code></td><td>1.3 GB</td><td>~0.2</td><td><strong>~1.5 GB</strong></td><td style="color:var(--ok)">Comfortable — use this</td></tr>
-    <tr><td>Qwen3-4B Q4, <code>-c 8192</code></td><td>2.5 GB</td><td>~0.3</td><td><strong>~2.8 GB</strong></td><td style="color:var(--ok)">Fine. Slower, much smarter</td></tr>
-    <tr><td>Qwen3-4B Q4, <code>-c 32768</code></td><td>2.5 GB</td><td>~1.2</td><td><strong>~3.7 GB</strong></td><td style="color:var(--warn)">Works if you close things</td></tr>
-    <tr><td>Qwen3-8B Q4, <code>-c 8192</code></td><td>4.9 GB</td><td>~0.5</td><td><strong>~5.4 GB</strong></td><td style="color:var(--warn)">Tight, and slow on CPU</td></tr>
-    <tr><td>14B+, or <code>-c 131072</code></td><td>—</td><td>—</td><td><strong>—</strong></td><td style="color:var(--bad)">No. You will swap and crawl</td></tr>
-  </table>
-  <div class="note acc">Read the KV figure llama.cpp prints at startup instead of trusting this table — your hardware and build differ.</div>
-</section>
-
-<!-- 20 -->
-<section class="slide">
-  <div class="kicker">Concepts · speed</div>
-  <h2>Throughput vs latency</h2>
-  <div class="grid g2">
-    <div class="card">
-      <h4>Time to first token (TTFT)</h4>
-      <p>Dominated by <em>prefill</em> — processing your prompt. Feels like <strong>responsiveness</strong>.</p>
-    </div>
-    <div class="card">
-      <h4>Decode speed (tok/s)</h4>
-      <p>How fast the rest streams out. Feels like <strong>speed</strong>.</p>
+  <header class="hband"><h2>llama-swap · a production route, annotated</h2><div class="logo-w"></div></header>
+  <div class="body">
+    <div class="grid g2">
+      <div>
+<pre><code><span class="k">local-fast</span>:
+  <span class="k">cmd</span>: >
+    llama-server
+    -m /models/…/Qwen3.8-9B-Q6_K.gguf
+    --host <span class="n">127.0.0.1</span>
+    --port ${PORT}
+    -c <span class="n">131072</span>
+    --parallel <span class="n">4</span>
+    --cache-type-k <span class="n">q8_0</span>
+    --cache-type-v <span class="n">q8_0</span>
+    --flash-attn on
+    --jinja
+    --reasoning-budget <span class="n">0</span>
+    -ngl <span class="n">999</span>
+  <span class="k">ttl</span>: <span class="n">3600</span>
+  <span class="k">proxy</span>: http://127.0.0.1:${PORT}</code></pre>
+      </div>
+      <div>
+        <ul>
+          <li><code>--host 127.0.0.1</code> — never bind the LAN by accident</li>
+          <li><code>--cache-type-k/v q8_0</code> — halves the KV cache; the standard RAM lever</li>
+          <li><code>--reasoning-budget 0</code> — stops a thinking model burning the whole output budget on thought</li>
+          <li><code>--jinja</code> — the model's own chat template; required for tool calling</li>
+          <li><code>-ngl 999</code> — offload everything to GPU. <b>On your laptop: <code>-ngl 0</code>.</b></li>
+          <li><code>-c 131072 --parallel 4</code> — a 128 GB box's numbers. <b>Yours: <code>-c 8192 -np 1</code>.</b></li>
+        </ul>
+        <div class="note">Same structure, different scale. Take the <em>shape</em>, not the numbers.</div>
+      </div>
     </div>
   </div>
-  <h3>What to expect on a 16 GB laptop CPU</h3>
-  <table>
-    <tr><th>Model</th><th>tok/s</th><th>Feel</th></tr>
-    <tr><td>135M</td><td>40–80</td><td>Instant, useless</td></tr>
-    <tr><td>0.6B</td><td>20–40</td><td>Snappy, weak</td></tr>
-    <tr><td><strong>1.7B</strong></td><td><strong>8–20</strong></td><td><strong>Comfortable to read</strong></td></tr>
-    <tr><td>4B</td><td>4–10</td><td>Noticeable wait</td></tr>
-    <tr><td>8B</td><td>2–5</td><td>Painful</td></tr>
-  </table>
-  <div class="note">Measure your own with <code>llama-bench</code>. <strong>Batching</strong> is what vLLM is for — with one user there is nothing to batch, so llama.cpp's simpler approach wins.</div>
+  <div class="foot"><span>© MHP Management- und IT-Beratung GmbH</span><span class="pg"></span></div>
 </section>
 
-<!-- 21 -->
+<!-- 16 · GATEWAYS CONCEPT -->
 <section class="slide">
-  <div class="kicker">Concepts · sampling</div>
-  <h2>Temperature, and a real trap</h2>
-  <table>
-    <tr><th>Parameter</th><th>Does</th><th>Use</th></tr>
-    <tr><td class="mono">temperature</td><td>Controls randomness</td><td>0.0–0.3 code and tools · 0.8–1.2 prose</td></tr>
-    <tr><td class="mono">top_p</td><td>Truncates to a probability mass</td><td>Usually leave at the model's default</td></tr>
-    <tr><td class="mono">top_k</td><td>Truncates to N candidates</td><td>Usually leave alone</td></tr>
-  </table>
-  <div class="note bad"><strong>The trap:</strong> many models have a <em>recommended sampling recipe</em>, and ignoring it degrades quality noticeably. Qwen3 in particular wants specific settings, and its thinking mode should often be disabled for tool use.<br><br>Read the model card. It is not boilerplate.</div>
-</section>
-
-<!-- 22 -->
-<section class="slide">
-  <div class="kicker">Concepts · reasoning</div>
-  <h2>Thinking models, and the empty reply</h2>
-  <p>Some models emit a private chain-of-thought before answering. Better on hard problems — and it costs a <em>lot</em> of tokens.</p>
-  <div class="card warn" style="margin-top:.7em">
-    <p>A thinking model can burn <strong>4 000 tokens of reasoning</strong> to write <strong>200 words of answer</strong>.</p>
+  <header class="hband"><h2>Layer 4 · several backends, one endpoint</h2><div class="logo-w"></div></header>
+  <div class="body">
+    <p>Your local llama-swap, a colleague's GPU box, OpenRouter, Google's free tier — different URLs, different keys.</p>
+    <div class="card acc" style="margin-top:.6em">
+      <h4>LiteLLM puts one endpoint in front of all of it</h4>
+      <ul>
+        <li><strong>Routing</strong> — <code>fast-model</code> local, <code>big-model</code> cloud</li>
+        <li><strong>Fallback</strong> — local died? retry on the cloud. <em>This is what makes a workshop survivable.</em></li>
+        <li><strong>Uniform API</strong> — 100+ providers behind OpenAI-shaped endpoints</li>
+      </ul>
+    </div>
+    <div class="callout" style="margin-top:.9em"><p>Clients talk to <code>:4000</code> and never learn where the tokens came from.</p></div>
   </div>
-  <h3>Two consequences on a laptop</h3>
-  <ol>
-    <li>It is slow.</li>
-    <li>If <code>max_tokens</code> is too small, it spends the <em>entire</em> budget thinking and returns <strong>an empty reply</strong>.</li>
-  </ol>
-  <div class="note bad">That looks exactly like a crash, and it is not. Check <code>.choices[0].message.reasoning_content</code> — if that is huge and <code>content</code> is empty, raise <code>max_tokens</code> or pass <code>--reasoning-budget 0</code>.</div>
+  <div class="foot"><span>© MHP Management- und IT-Beratung GmbH</span><span class="pg"></span></div>
 </section>
 
-<!-- 23 -->
+<!-- 17 · LITELLM CONFIG -->
 <section class="slide">
-  <div class="kicker">Concepts · agents</div>
-  <h2>Tool calling — what makes an agent</h2>
-  <div class="diagram">model  ──> {"tool":"read_file","args":{"path":"main.py"}}
+  <header class="hband"><h2>LiteLLM · the config, whole</h2><div class="logo-w"></div></header>
+  <div class="body">
+<pre><code><span class="k">model_list</span>:
+  - <span class="k">model_name</span>: <span class="s">local-chat</span>          <span class="c"># PUBLIC alias — what clients ask for</span>
+    <span class="k">litellm_params</span>:
+      <span class="k">model</span>: <span class="s">openai/chat</span>            <span class="c"># openai/ = protocol · chat = upstream id</span>
+      <span class="k">api_base</span>: <span class="s">os.environ/LOCAL_API_BASE</span>   <span class="c"># http://host.docker.internal:8090/v1</span>
+      <span class="k">api_key</span>: <span class="s">os.environ/LOCAL_API_KEY</span>     <span class="c"># "dummy" for a keyless local server</span>
+      <span class="k">timeout</span>: <span class="n">600</span>                  <span class="c"># survive a cold llama-swap load</span>
+
+  - <span class="k">model_name</span>: <span class="s">resilient</span>           <span class="c"># same backend, cloud behind it</span>
+    <span class="k">litellm_params</span>:
+      <span class="k">model</span>: <span class="s">openai/chat</span>
+      <span class="k">api_base</span>: <span class="s">os.environ/LOCAL_API_BASE</span>
+      <span class="k">api_key</span>: <span class="s">os.environ/LOCAL_API_KEY</span>
+      <span class="k">timeout</span>: <span class="n">600</span>
+
+<span class="k">router_settings</span>:
+  <span class="k">fallbacks</span>:
+    - <span class="s">resilient</span>: [<span class="s">"cloud-fast"</span>]     <span class="c"># local down? retry on the cloud</span>
+
+<span class="k">general_settings</span>:
+  <span class="k">master_key</span>: <span class="s">os.environ/LITELLM_MASTER_KEY</span>   <span class="c"># must start with sk-</span></code></pre>
+    <p class="dim">Full file in the repo: <code>configs/litellm/config.yaml</code></p>
+  </div>
+  <div class="foot"><span>© MHP Management- und IT-Beratung GmbH</span><span class="pg"></span></div>
+</section>
+
+<!-- 18 · LITELLM PARAMS -->
+<section class="slide">
+  <header class="hband"><h2>LiteLLM · what each part does</h2><div class="logo-w"></div></header>
+  <div class="body">
+    <table>
+      <tr><th>Key</th><th>Why it matters</th></tr>
+      <tr><td>model_name</td><td>The alias the <b>client</b> sends. A routing group, not a model.</td></tr>
+      <tr><td>litellm_params.model</td><td>What LiteLLM asks upstream. <code>openai/</code> is a <b>protocol selector</b>; the part after it must match the server's id byte-for-byte.</td></tr>
+      <tr><td>api_base</td><td><code>host.docker.internal</code>, never <code>127.0.0.1</code> — inside the container, loopback means the container.</td></tr>
+      <tr><td>api_key</td><td><code>dummy</code> is correct for a keyless local server. Real keys go through <code>os.environ/NAME</code>.</td></tr>
+      <tr><td>timeout</td><td>Per-route. Order it above the global timeout, above llama-swap's health check — or retries re-trigger cold loads.</td></tr>
+      <tr><td>fallbacks</td><td>The resilience demo: kill the local server, the request still answers.</td></tr>
+      <tr><td>master_key</td><td>Once set, <b>every</b> key-bearing endpoint 401s without the bearer — including <code>/v1/models</code>. <code>/health/liveliness</code> stays open.</td></tr>
+    </table>
+    <div class="note blue"><code>drop_params: true</code> is load-bearing for llama.cpp: it strips a null <code>encoding_format</code> that would otherwise 400 every embedding request.</div>
+  </div>
+  <div class="foot"><span>© MHP Management- und IT-Beratung GmbH</span><span class="pg"></span></div>
+</section>
+
+<!-- 19 · LITELLM COMPOSE -->
+<section class="slide">
+  <header class="hband"><h2>LiteLLM · docker-compose.yml, and the one line that matters</h2><div class="logo-w"></div></header>
+  <div class="body">
+    <div class="grid g2">
+      <div>
+<pre><code><span class="k">services</span>:
+  <span class="k">litellm</span>:
+    <span class="k">image</span>: ghcr.io/berriai/litellm:<span class="s">v1.106.4</span>
+    <span class="k">command</span>: [<span class="s">"--config"</span>, <span class="s">"/app/config.yaml"</span>,
+              <span class="s">"--port"</span>, <span class="s">"4000"</span>]
+    <span class="k">ports</span>: [<span class="s">"4000:4000"</span>]
+    <span class="k">volumes</span>:
+      - ./config.yaml:/app/config.yaml:<span class="s">ro</span>
+    <span class="k">env_file</span>: [.env]        <span class="c"># gitignored</span>
+    <span class="k">extra_hosts</span>:            <span class="c"># ← THE line</span>
+      - <span class="s">"host.docker.internal:host-gateway"</span>
+    <span class="k">restart</span>: unless-stopped</code></pre>
+      </div>
+      <div>
+        <h3>Why <code>extra_hosts</code></h3>
+        <ul>
+          <li>LiteLLM runs <b>inside a container</b>; your model runs on the <b>host</b>.</li>
+          <li>Docker Desktop (macOS/Windows) provides <code>host.docker.internal</code> automatically.</li>
+          <li>Linux and WSL2 <b>do not</b> — this line creates it.</li>
+          <li>Harmless on macOS, <b>required</b> on Linux. One uniform file beats three variants.</li>
+        </ul>
+        <div class="note warn">Missing it is the single most common LiteLLM failure in this workshop: routes list fine, every completion fails.</div>
+      </div>
+    </div>
+  </div>
+  <div class="foot"><span>© MHP Management- und IT-Beratung GmbH</span><span class="pg"></span></div>
+</section>
+
+<!-- 20 · LITELLM PRODUCTION -->
+<section class="slide">
+  <header class="hband"><h2>LiteLLM · a production route, annotated</h2><div class="logo-w"></div></header>
+  <div class="body">
+    <div class="grid g2">
+      <div>
+<pre><code><span class="c"># PASSTHROUGH ROUTE BY DESIGN —</span>
+<span class="c"># no sampling params here at all</span>
+- <span class="k">model_name</span>: <span class="s">qwen3.8-9b</span>
+  <span class="k">litellm_params</span>:
+    <span class="k">model</span>: <span class="s">openai/qwen3.8-9b</span>
+    <span class="k">api_base</span>: <span class="s">http://host.docker.internal:8090/v1</span>
+    <span class="k">api_key</span>: <span class="s">dummy</span>
+    <span class="k">timeout</span>: <span class="n">1400</span></code></pre>
+      </div>
+      <div>
+        <ul>
+          <li><strong>Passthrough sampling.</strong> The model's own tested recipe is authoritative; the gateway does not second-guess it.</li>
+          <li><strong><code>timeout: 1400</code></strong> — above llama-swap's health-check timeout, so a cold load is not mistaken for a crash.</li>
+          <li><strong>Capitalised id</strong> — matches <code>--served-model-name</code> exactly.</li>
+        </ul>
+        <div class="note">The lesson: set sampling in the gateway <em>only</em> when you are deliberately overriding the model's recipe. Otherwise let it through.</div>
+      </div>
+    </div>
+  </div>
+  <div class="foot"><span>© MHP Management- und IT-Beratung GmbH</span><span class="pg"></span></div>
+</section>
+
+<!-- 21 · CLIENTS -->
+<section class="slide">
+  <header class="hband"><h2>Layer 5 · the point of all this</h2><div class="logo-w"></div></header>
+  <div class="body">
+    <div class="grid g2">
+      <div class="card acc">
+        <h4>Qwen Code</h4>
+        <p>Terminal agent: reads your repo, edits files, runs commands. Has <code>qwen serve</code> — a daemon with a browser UI.</p>
+      </div>
+      <div class="card lim">
+        <h4>OpenCode</h4>
+        <p>Similar agent, provider-agnostic by design. Ships a model catalogue, so hosted providers need no config at all.</p>
+      </div>
+    </div>
+    <p style="margin-top:.8em">Both are configured with a <strong>base URL</strong> and a <strong>model name</strong>. Point them at <code>http://127.0.0.1:4000</code> and they use whatever LiteLLM routes to.</p>
+    <div class="callout" style="margin-top:.8em"><p>Configuring both takes ten minutes — and teaches the real lesson: the <em>stack</em> is the durable investment. The client is interchangeable.</p></div>
+  </div>
+  <div class="foot"><span>© MHP Management- und IT-Beratung GmbH</span><span class="pg"></span></div>
+</section>
+
+<!-- 22 · TOKENS -->
+<section class="slide">
+  <header class="hband"><h2>Concepts · models do not see words</h2><div class="logo-w"></div></header>
+  <div class="body">
+    <p>They see <strong>tokens</strong> — chunks of text. Everything is measured in them: context size, price, speed.</p>
+    <div class="card acc" style="margin-top:.7em">
+      <p style="font-family:var(--mono);font-size:clamp(14px,1.7vw,22px);color:var(--navy)">1 token ≈ 4 characters ≈ 0.75 English words</p>
+    </div>
+<pre><code><span class="c"># 19 characters ≈ 5 tokens</span>
+echo -n <span class="s">"The quick brown fox"</span> | wc -c</code></pre>
+    <p class="dim">A 500-word document is ~650 tokens. A large source file can be 3 000. This is why context runs out faster than you expect.</p>
+  </div>
+  <div class="foot"><span>© MHP Management- und IT-Beratung GmbH</span><span class="pg"></span></div>
+</section>
+
+<!-- 23 · CONTEXT -->
+<section class="slide">
+  <header class="hband"><h2>Concepts · the context window</h2><div class="logo-w"></div></header>
+  <div class="body">
+    <p>The maximum tokens the model can attend to at once — <strong>your prompt + its reply + the whole conversation so far</strong>.</p>
+    <div class="note warn">Exceed it and the start <em>silently</em> falls off the front. No error. The agent just forgets what you said twenty messages ago.</div>
+    <h3>Context is not free</h3>
+    <p>The engine allocates a <strong>KV cache</strong> that grows linearly with <code>-c</code>. A 1.3 GB model file at 128k context can have a KV cache <em>larger than the model</em>.</p>
+    <div class="callout" style="margin-top:.8em"><p>Default small. Start at <code>-c 4096</code> and raise it only when you hit the wall.</p></div>
+  </div>
+  <div class="foot"><span>© MHP Management- und IT-Beratung GmbH</span><span class="pg"></span></div>
+</section>
+
+<!-- 24 · CONTEXT TRAPS -->
+<section class="slide">
+  <header class="hband"><h2>Concepts · two context traps, measured</h2><div class="logo-w"></div></header>
+  <div class="body">
+    <h3>1 · <code>-c 0</code> means "the model's own context", not zero</h3>
+    <p class="dim">That is the default. On a 128k model it allocates a 128k KV cache and takes your laptop with it.</p>
+    <h3>2 · parallel slots eat your context</h3>
+    <table>
+      <tr><th>Flags</th><th>n_ctx_seq</th><th>What happened</th></tr>
+      <tr><td>-c 4096 (auto)</td><td><b>4096</b></td><td>auto enables a <em>unified</em> KV cache; slots share one pool</td></tr>
+      <tr><td>-c 4096 -np 1</td><td><b>4096</b></td><td>one slot, full context</td></tr>
+      <tr><td>-c 4096 -np 4</td><td><b>1024</b></td><td>explicit parallel <b>divides</b> it: 4096 ÷ 4</td></tr>
+    </table>
+    <div class="note">Typing <code>-np 4</code> yourself gives each request a <em>quarter</em> of the context you asked for. Want four slots at 4096 each? Ask for <code>-c 16384 -np 4</code>.<br><br><strong>For this workshop: use <code>-np 1</code>.</strong> You are one person.</div>
+  </div>
+  <div class="foot"><span>© MHP Management- und IT-Beratung GmbH</span><span class="pg"></span></div>
+</section>
+
+<!-- 25 · RAM BUDGETS -->
+<section class="slide">
+  <header class="hband"><h2>Concepts · realistic budgets on 16 GB</h2><div class="logo-w"></div></header>
+  <div class="body">
+    <p class="dim">Your OS, browser, Docker and IDE already eat 6–8 GB. Treat <strong>~6 GB</strong> as your total model budget.</p>
+    <table>
+      <tr><th>Configuration</th><th>Weights</th><th>KV</th><th>Total</th><th>Verdict</th></tr>
+      <tr><td>Qwen3-1.7B Q4, -c 8192</td><td>1.3 GB</td><td>~0.2</td><td><b>~1.5 GB</b></td><td><b>Comfortable — use this</b></td></tr>
+      <tr><td>Qwen3-4B Q4, -c 8192</td><td>2.5 GB</td><td>~0.3</td><td><b>~2.8 GB</b></td><td>Fine. Slower, much smarter</td></tr>
+      <tr><td>Qwen3-4B Q4, -c 32768</td><td>2.5 GB</td><td>~1.2</td><td><b>~3.7 GB</b></td><td>Works if you close things</td></tr>
+      <tr><td>Qwen3-8B Q4, -c 8192</td><td>4.9 GB</td><td>~0.5</td><td><b>~5.4 GB</b></td><td>Tight, and slow on CPU</td></tr>
+      <tr><td>14B+, or -c 131072</td><td>—</td><td>—</td><td><b>—</b></td><td>No. You will swap and crawl</td></tr>
+    </table>
+    <div class="note blue">Read the KV figure llama.cpp prints at startup instead of trusting any table — your hardware and build differ.</div>
+  </div>
+  <div class="foot"><span>© MHP Management- und IT-Beratung GmbH</span><span class="pg"></span></div>
+</section>
+
+<!-- 26 · SPEED -->
+<section class="slide">
+  <header class="hband"><h2>Concepts · throughput vs latency</h2><div class="logo-w"></div></header>
+  <div class="body">
+    <div class="grid g2">
+      <div class="card"><h4>Time to first token</h4><p>Dominated by <em>prefill</em> — processing your prompt. Feels like <strong>responsiveness</strong>.</p></div>
+      <div class="card"><h4>Decode speed (tok/s)</h4><p>How fast the rest streams out. Feels like <strong>speed</strong>.</p></div>
+    </div>
+    <table style="margin-top:.6em">
+      <tr><th>Model</th><th>tok/s on a laptop CPU</th><th>Feel</th></tr>
+      <tr><td>135M</td><td>40–80</td><td>Instant, useless</td></tr>
+      <tr><td>0.6B</td><td>20–40</td><td>Snappy, weak</td></tr>
+      <tr><td><b>1.7B</b></td><td><b>8–20</b></td><td><b>Comfortable to read</b></td></tr>
+      <tr><td>4B</td><td>4–10</td><td>Noticeable wait</td></tr>
+      <tr><td>8B</td><td>2–5</td><td>Painful</td></tr>
+    </table>
+    <div class="note">Measure your own with <code>llama-bench</code>. <strong>Batching</strong> is what vLLM is for — with one user there is nothing to batch, so llama.cpp's simpler approach wins.</div>
+  </div>
+  <div class="foot"><span>© MHP Management- und IT-Beratung GmbH</span><span class="pg"></span></div>
+</section>
+
+<!-- 27 · SAMPLING + REASONING -->
+<section class="slide">
+  <header class="hband"><h2>Concepts · sampling, and the empty reply</h2><div class="logo-w"></div></header>
+  <div class="body">
+    <div class="grid g2">
+      <div class="card acc">
+        <h4>Sampling</h4>
+        <ul>
+          <li><code>temperature</code> 0.0–0.3 for code and tools; 0.8–1.2 for prose</li>
+          <li>Many models have a <b>recommended recipe</b> — read the model card</li>
+        </ul>
+      </div>
+      <div class="card warn">
+        <h4>Thinking models</h4>
+        <ul>
+          <li>Can burn <b>4 000 tokens of reasoning</b> to write 200 words of answer</li>
+          <li>If <code>max_tokens</code> is too small, the whole budget goes to thought and <b>content comes back empty</b></li>
+        </ul>
+      </div>
+    </div>
+    <div class="note warn">An empty reply looks exactly like a crash and is not. Check <code>reasoning_content</code> — if it is huge and <code>content</code> is empty, raise <code>max_tokens</code> or pass <code>--reasoning-budget 0</code>.</div>
+  </div>
+  <div class="foot"><span>© MHP Management- und IT-Beratung GmbH</span><span class="pg"></span></div>
+</section>
+
+<!-- 28 · TOOL CALLING -->
+<section class="slide">
+  <header class="hband"><h2>Concepts · tool calling is what makes an agent</h2><div class="logo-w"></div></header>
+  <div class="body">
+    <div class="diagram">model  ──> {"tool":"read_file","args":{"path":"main.py"}}
   your code runs it
 model  <── {"result":"def main(): ..."}
 model  ──> next step</div>
-  <p style="margin-top:.8em">The model emits <strong>structured JSON</strong> saying "call this function with these arguments"; your code runs it and feeds the result back. That loop is what turns a chatbot into an agent — and it is what makes coding CLIs work.</p>
-  <div class="note bad"><strong>It is also the first thing that breaks on small models.</strong> Reliable tool calling needs a big model. A 1.7B fumbles the JSON; a 4B is marginal; expect <strong>7B+</strong> for dependable agents.<br><br>llama.cpp requires <code>--jinja</code> so the model's own tool-call template is used — in current builds it is on by default.</div>
-</section>
-
-<!-- 24 -->
-<section class="slide center">
-  <div class="kicker">Demo · 5 minutes</div>
-  <h2>We are going to watch this fail</h2>
-  <p class="sub">Same prompt to a 135M model and a 1.7B model.</p>
-  <div class="card acc" style="margin-top:1.4em;max-width:34em">
-    <p style="font-family:var(--mono);font-size:clamp(12px,1.3vw,16px);color:var(--fg)">"List exactly three prime numbers as a JSON array.<br>Output only the JSON, no other text."</p>
+    <p style="margin-top:.7em">The model emits <strong>structured JSON</strong>; your code runs it and feeds the result back. That loop turns a chatbot into an agent.</p>
+    <div class="note warn">It is also <strong>the first thing that breaks on small models</strong>. A 1.7B fumbles the JSON; a 4B is marginal; expect 7B+ for dependable agents. llama.cpp needs <code>--jinja</code> so the model's own tool template is used.</div>
   </div>
-  <p class="dim" style="margin-top:1.2em">The 135M is ~13× smaller and much faster.<br>You will see precisely what that costs.</p>
+  <div class="foot"><span>© MHP Management- und IT-Beratung GmbH</span><span class="pg"></span></div>
 </section>
 
-<!-- 25 -->
+<!-- 29 · DEMO -->
+<section class="slide side on-blue">
+  <div class="sband"><span class="copy">© MHP Management- und IT-Beratung GmbH</span></div>
+  <div class="smain" style="align-items:center;justify-content:center;text-align:center">
+    <h2 class="big-h" style="color:#fff">We are going to watch this fail</h2>
+    <p class="white" style="max-width:26em">Same prompt to a <strong>135M</strong> model and a <strong>1.7B</strong> model.</p>
+    <div class="card navy" style="margin-top:1.2em;max-width:34em">
+      <p style="font-family:var(--mono);color:#fff">"List exactly three prime numbers as a JSON array. Output only the JSON, no other text."</p>
+    </div>
+    <p class="white dim" style="margin-top:1.2em;color:var(--peri)">The 135M is ~13× smaller and much faster.<br>You will see precisely what that costs.</p>
+  </div>
+  <div class="foot" style="margin-left:clamp(120px,26vw,330px)"><span></span><span class="pg"></span></div>
+</section>
+
+<!-- 30 · RAG -->
 <section class="slide">
-  <div class="kicker">Concepts · RAG</div>
-  <h2>Retrieval-Augmented Generation</h2>
-  <p>Instead of <em>hoping</em> the model knows something, you <strong>look it up</strong> and put it in the prompt.</p>
-  <div class="diagram" style="margin-top:.8em">documents ─> chunk ─> embedding model ─> vectors ─> store
+  <header class="hband"><h2>Concepts · RAG: look it up, don't hope</h2><div class="logo-w"></div></header>
+  <div class="body">
+    <div class="diagram">documents ─> chunk ─> embedding model ─> vectors ─> store
 
 query     ─> embedding model ─> vector ─> nearest neighbours ─> top-k chunks
 
 top-k chunks + query ─> chat model ─> answer  (with citations)</div>
-  <div class="note ok" style="margin-top:.9em"><strong>Every piece of that runs locally on your laptop</strong>, and the embedding models are tiny — <code>nomic-embed-text-v1.5</code> is <strong>0.15 GB</strong>.<br><br>RAG is the highest-value thing you can self-host: a small model plus good retrieval beats a big model guessing.</div>
-</section>
-
-<!-- 26 -->
-<section class="slide">
-  <div class="kicker">Setting expectations</div>
-  <h2>What small local models are actually good for</h2>
-  <div class="grid g2">
-    <div class="card ok">
-      <h4>Genuinely good</h4>
-      <ul>
-        <li><strong>Embeddings and retrieval</strong> — tiny models, excellent results, zero cost</li>
-        <li><strong>Classification and extraction</strong> — "is this spam?", "pull the dates out"</li>
-        <li><strong>Summarisation</strong> of short documents</li>
-        <li><strong>Anything private</strong> — it never leaves the machine</li>
-        <li><strong>Learning</strong> — you cannot understand these systems without running one</li>
-      </ul>
-    </div>
-    <div class="card bad">
-      <h4>Genuinely bad</h4>
-      <ul>
-        <li>Correct code across many files</li>
-        <li>Reliable tool calling</li>
-        <li>Long reasoning chains</li>
-        <li>Anything needing current facts</li>
-      </ul>
-    </div>
+    <div class="callout" style="margin-top:.9em"><p>Every piece runs locally on your laptop, and the embedding models are tiny — <code>nomic-embed-text-v1.5</code> is <strong>0.15 GB</strong>.<br>A small model plus good retrieval beats a big model guessing.</p></div>
   </div>
-  <div class="note acc">For the second column, the stack you build today <strong>routes to a cloud model</strong>. That is a feature, not a cop-out.</div>
+  <div class="foot"><span>© MHP Management- und IT-Beratung GmbH</span><span class="pg"></span></div>
 </section>
 
-<!-- 27 -->
+<!-- 31 · EXPECTATIONS -->
 <section class="slide">
-  <div class="kicker">What good looks like</div>
-  <h2>Your target by the end of the day</h2>
-  <div class="diagram">your coding agent ──> LiteLLM :4000 ──> llama-swap :8090 ──> llama-server ──> Qwen3-1.7B.gguf
+  <header class="hband"><h2>What small local models are actually good for</h2><div class="logo-w"></div></header>
+  <div class="body">
+    <div class="grid g2">
+      <div class="card ok">
+        <h4>Genuinely good</h4>
+        <ul>
+          <li><strong>Embeddings and retrieval</strong> — tiny models, excellent results, zero cost</li>
+          <li><strong>Classification and extraction</strong></li>
+          <li><strong>Summarisation</strong> of short documents</li>
+          <li><strong>Anything private</strong> — it never leaves the machine</li>
+          <li><strong>Learning</strong> — you cannot understand these systems without running one</li>
+        </ul>
+      </div>
+      <div class="card warn">
+        <h4>Genuinely bad</h4>
+        <ul>
+          <li>Correct code across many files</li>
+          <li>Reliable tool calling</li>
+          <li>Long reasoning chains</li>
+          <li>Anything needing current facts</li>
+        </ul>
+      </div>
+    </div>
+    <div class="note blue">For the right-hand column, the stack you build today <strong>routes to a cloud model</strong>. That is a feature, not a cop-out.</div>
+  </div>
+  <div class="foot"><span>© MHP Management- und IT-Beratung GmbH</span><span class="pg"></span></div>
+</section>
+
+<!-- 32 · TARGET -->
+<section class="slide">
+  <header class="hband"><h2>What good looks like by the end of the day</h2><div class="logo-w"></div></header>
+  <div class="body">
+    <div class="diagram">your coding agent ──> LiteLLM :4000 ──> llama-swap :8090 ──> llama-server ──> Qwen3-1.7B.gguf
                             │
                             └──fallback──> a cloud API  (when local is not good enough)</div>
-  <h3>How to build it</h3>
-  <ol>
-    <li>One layer at a time, bottom-up</li>
-    <li><strong>Verify each layer before adding the next</strong> — every layer has a curl</li>
-    <li>When it breaks, work down the stack, not up</li>
-  </ol>
-<pre style="margin-top:.8em"><code>./scripts/healthcheck.sh   <span class="cmt"># tells you the LOWEST broken layer</span></code></pre>
+    <h3>How to build it</h3>
+    <ol>
+      <li>One layer at a time, bottom-up</li>
+      <li><strong>Verify each layer before adding the next</strong> — every layer has a curl</li>
+      <li>When it breaks, work <em>down</em> the stack, not up</li>
+    </ol>
+<pre><code>./scripts/healthcheck.sh   <span class="c"># tells you the LOWEST broken layer</span></code></pre>
+  </div>
+  <div class="foot"><span>© MHP Management- und IT-Beratung GmbH</span><span class="pg"></span></div>
 </section>
 
-<!-- 28 -->
+<!-- 33 · PATH -->
 <section class="slide">
-  <div class="kicker">The path today</div>
-  <h2>Hands-on sequence</h2>
-  <table>
-    <tr><th>#</th><th>Do</th><th>You end up with</th></tr>
-    <tr><td>1</td><td><code>scripts/download-models.sh</code></td><td>3.8 GB of weights, verified</td></tr>
-    <tr><td>2</td><td><code>llama-server -m … -c 8192</code></td><td>A model on <code>:8080</code></td></tr>
-    <tr><td>3</td><td><code>llama-bench</code></td><td>Your real numbers, not guesses</td></tr>
-    <tr><td>4</td><td><code>llama-swap --config …</code></td><td>Four models, one port</td></tr>
-    <tr><td>5</td><td><code>docker compose up -d</code></td><td>Gateway on <code>:4000</code> + cloud fallback</td></tr>
-    <tr><td>6</td><td>Point Qwen Code / OpenCode at it</td><td>An agent on your own model</td></tr>
-  </table>
-  <div class="note">Six exercises in <code>exercises/README.md</code>. Record your answers — you push them at the end, which is also a Git exercise.</div>
+  <header class="hband"><h2>The hands-on path</h2><div class="logo-w"></div></header>
+  <div class="body">
+    <table>
+      <tr><th>#</th><th>Do</th><th>You end up with</th></tr>
+      <tr><td>1</td><td><code>scripts/download-models.sh</code></td><td>3.8 GB of weights, verified</td></tr>
+      <tr><td>2</td><td><code>llama-server -m … -c 8192 -np 1</code></td><td>A model on <code>:8080</code></td></tr>
+      <tr><td>3</td><td><code>llama-bench -ngl 0 -t 4</code></td><td>Your real numbers, not guesses</td></tr>
+      <tr><td>4</td><td><code>llama-swap --config …</code></td><td>Four models, one port</td></tr>
+      <tr><td>5</td><td><code>docker compose up -d</code></td><td>Gateway on <code>:4000</code> + cloud fallback</td></tr>
+      <tr><td>6</td><td>Point Qwen Code / OpenCode at it</td><td>An agent on your own model</td></tr>
+    </table>
+    <div class="note">Six exercises in <code>exercises/README.md</code>. Record your answers — you push them at the end, which is also a Git exercise.</div>
+  </div>
+  <div class="foot"><span>© MHP Management- und IT-Beratung GmbH</span><span class="pg"></span></div>
 </section>
 
-<!-- 29 -->
-<section class="slide center">
-  <div class="kicker">Takeaways</div>
-  <h2>Five things to remember</h2>
-  <ol style="font-size:clamp(15px,1.7vw,23px);max-width:32em">
-    <li style="margin:.65em 0">Five layers. <strong>Build bottom-up, verify each one.</strong></li>
-    <li style="margin:.65em 0">The <strong>OpenAI-compatible API</strong> is why any client works with any server.</li>
-    <li style="margin:.65em 0"><strong>Context costs RAM</strong>, and <code>-np</code> divides it. Quantisation costs quality.</li>
-    <li style="margin:.65em 0"><strong>Tool calling breaks first</strong> as models shrink — and agents are built from tool calls.</li>
-    <li style="margin:.65em 0">Self-hosting is a <strong>trade</strong>. RAG and private work win; frontier reasoning does not.</li>
-  </ol>
-  <p class="dim" style="margin-top:1.3em">Everything here is in <code>docs/01-concepts.md</code>. Questions now, or in the hands-on?</p>
+<!-- 34 · TAKEAWAYS -->
+<section class="slide side">
+  <div class="sband"><span class="copy">© MHP Management- und IT-Beratung GmbH</span></div>
+  <div class="smain">
+    <div class="logo-n"></div>
+    <h2 class="big-h">Five things to remember</h2>
+    <ol style="font-size:clamp(14px,1.7vw,23px);max-width:34em">
+      <li style="margin:.6em 0">Five layers. <strong>Build bottom-up, verify each one.</strong></li>
+      <li style="margin:.6em 0">The <strong>OpenAI-compatible API</strong> is why any client works with any server.</li>
+      <li style="margin:.6em 0"><strong>Context costs RAM</strong>, and <code>-np</code> divides it. Quantisation costs quality.</li>
+      <li style="margin:.6em 0"><strong>Tool calling breaks first</strong> as models shrink — and agents are built from tool calls.</li>
+      <li style="margin:.6em 0">Self-hosting is a <strong>trade</strong>. RAG and private work win; frontier reasoning does not.</li>
+    </ol>
+    <p class="dim" style="margin-top:1.1em">Everything here is in <code>docs/01-concepts.md</code>. Questions now, or in the hands-on?</p>
+  </div>
+  <div class="foot" style="margin-left:clamp(120px,26vw,330px)"><span></span><span class="pg"></span></div>
 </section>
 
 </div>
@@ -596,22 +880,21 @@ top-k chunks + query ─> chat model ─> answer  (with citations)</div>
   <button id="grid" title="Overview (O)">&#9638;</button>
   <button id="next" title="Next (→)">&#8250;</button>
 </div>
-<footer><span id="ttl">Self-hosted LLMs</span><span id="cnt">1 / 1</span></footer>
 
 <script>
 (function(){
   var slides=[].slice.call(document.querySelectorAll('.slide')),i=0;
-  var bar=document.getElementById('bar'),cnt=document.getElementById('cnt'),
-      ttl=document.getElementById('ttl'),ov=document.getElementById('ov'),
+  var bar=document.getElementById('bar'),ov=document.getElementById('ov'),
       grid=document.getElementById('ovgrid');
-  function title(s){var h=s.querySelector('h1,h2');return h?h.textContent.trim():'(untitled)';}
+  var today=new Date();
+  var ds=('0'+today.getDate()).slice(-2)+'.'+('0'+(today.getMonth()+1)).slice(-2)+'.'+today.getFullYear();
+  function title(s){var h=s.querySelector('h1,h2');return h?h.textContent.trim().replace(/\s+/g,' '):'(untitled)';}
   function show(n){
     i=Math.max(0,Math.min(slides.length-1,n));
     slides.forEach(function(s,k){s.classList.toggle('active',k===i);});
     bar.style.width=((i+1)/slides.length*100)+'%';
-    cnt.textContent=(i+1)+' / '+slides.length;
-    ttl.textContent=(i===0?'Self-hosted LLMs':title(slides[i]));
-    document.title=(i===0?'Self-hosted LLMs':title(slides[i])+' — concepts');
+    slides[i].querySelectorAll('.pg').forEach(function(p){p.textContent=ds+'   '+(i+1);});
+    document.title=title(slides[i])+' — MHP · Self-hosted LLMs';
     if(location.hash!=='#'+(i+1)) history.replaceState(null,'','#'+(i+1));
   }
   function next(){show(i+1)} function prev(){show(i-1)}
@@ -641,7 +924,7 @@ top-k chunks + query ─> chat model ─> answer  (with citations)</div>
   document.getElementById('deck').addEventListener('click',function(e){
     if(e.target.closest('a,button,pre,code,input'))return;
     var x=e.clientX/window.innerWidth;
-    if(x>0.66)next(); else if(x<0.18)prev();});
+    if(x>0.72)next(); else if(x<0.14)prev();});
   var tx=null;
   document.addEventListener('touchstart',function(e){tx=e.changedTouches[0].clientX;},{passive:true});
   document.addEventListener('touchend',function(e){

@@ -48,3 +48,7 @@ exercises/answers.md
 exercises/rag/index.json
 __pycache__/
 *.pyc
+
+# Reference material dropped in for design inspiration — a 31 MB company
+# template, not repo content.
+sample_mhp_ppt.pptx
