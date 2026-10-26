@@ -3,94 +3,145 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>qwen serve — your coding agent as a daemon</title>
+<title>qwen serve — your coding agent as a daemon · MHP</title>
 <style>
   :root{
-    --bg:#0b0e14; --bg2:#121722; --fg:#e6e9ef; --dim:#98a2b3;
-    --acc:#7dd3fc; --acc2:#a78bfa; --ok:#4ade80; --warn:#fbbf24; --bad:#f87171;
-    --line:#232a38; --code:#0f1420;
-    --mono:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,"Liberation Mono",monospace;
-    --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    /* MHP brand, extracted from the corporate template's theme + rendered slides */
+    --b-hi:#363EF8;        /* gradient light end (bottom-left)   */
+    --b-mid:#242ADA;       /* gradient middle                    */
+    --b-lo:#1518BF;        /* gradient dark end (top-right)      */
+    --navy:#000099;        /* accent1 — logo mark, deep text     */
+    --head:#2026D2;        /* heading blue on white              */
+    --peri:#CDD6FF;        /* accent3 — light fills, borders     */
+    --lime:#DDEF03;        /* accent4 — highlight                */
+    --green:#00CC67;       /* accent5 — values, success          */
+    --coral:#F26B43;       /* master accent — warnings           */
+    --ink:#262626;         /* dk1 body text                      */
+    --grey:#575757;        /* dk2 secondary text                 */
+    --bg:#FFFFFF;
+    --code-bg:#0D1030;
+    --code-ink:#E8EBFF;
+    --code-key:#9FB0FF;
+    --code-str:#DDEF03;
+    --code-num:#5BE3A0;
+    --code-cmt:#7C86B8;
+    --font:"Segoe UI","Segoe UI Variable Text",system-ui,-apple-system,"Helvetica Neue",Arial,sans-serif;
+    --mono:ui-monospace,"Cascadia Code","SF Mono",Consolas,"Liberation Mono",monospace;
   }
   *{box-sizing:border-box;margin:0;padding:0}
-  html,body{height:100%;background:var(--bg);color:var(--fg);font-family:var(--sans);
-    -webkit-font-smoothing:antialiased;overflow:hidden}
+  html,body{height:100%;background:#e9ebf0;font-family:var(--font);overflow:hidden;
+    -webkit-font-smoothing:antialiased;color:var(--ink)}
   #deck{height:100%;width:100%;position:relative}
-  .slide{position:absolute;inset:0;display:none;flex-direction:column;justify-content:center;
-    padding:clamp(24px,5vh,64px) clamp(24px,6vw,96px);overflow-y:auto}
-  .slide.active{display:flex;animation:in .28s ease-out}
-  @keyframes in{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
-  h1{font-size:clamp(30px,5.2vw,62px);line-height:1.08;letter-spacing:-.02em;margin-bottom:.35em}
-  h2{font-size:clamp(24px,3.6vw,44px);line-height:1.15;letter-spacing:-.015em;margin-bottom:.5em}
-  h3{font-size:clamp(16px,1.7vw,22px);color:var(--acc);margin:1em 0 .4em;
-    text-transform:uppercase;letter-spacing:.09em;font-weight:600}
-  p,li{font-size:clamp(15px,1.55vw,21px);line-height:1.6;color:var(--fg)}
-  .dim{color:var(--dim)}
-  ul,ol{margin:.4em 0 .4em 1.3em}
-  li{margin:.42em 0}
-  li::marker{color:var(--acc)}
-  strong{color:#fff;font-weight:650}
-  em{color:var(--acc);font-style:normal}
-  code{font-family:var(--mono);font-size:.87em;background:var(--code);
-    border:1px solid var(--line);border-radius:5px;padding:.12em .42em;color:#c9d6e8;white-space:nowrap}
-  pre{background:var(--code);border:1px solid var(--line);border-left:3px solid var(--acc);
-    border-radius:9px;padding:14px 18px;overflow-x:auto;margin:.7em 0;max-width:100%}
-  pre code{background:none;border:none;padding:0;white-space:pre;color:#d6e2f2;
-    font-size:clamp(12px,1.25vw,16px);line-height:1.55}
-  .cmt{color:#5f6b7f}
-  .kw{color:var(--acc2)} .str{color:var(--ok)} .num{color:var(--warn)} .flg{color:var(--acc)}
-  .kicker{font-family:var(--mono);font-size:clamp(11px,1.1vw,14px);color:var(--acc);
-    text-transform:uppercase;letter-spacing:.16em;margin-bottom:1.1em}
-  .sub{font-size:clamp(16px,1.9vw,25px);color:var(--dim);line-height:1.5;max-width:34em}
-  .grid{display:grid;gap:clamp(12px,1.5vw,22px);margin-top:.6em}
-  .g2{grid-template-columns:repeat(auto-fit,minmax(min(100%,300px),1fr))}
-  .g3{grid-template-columns:repeat(auto-fit,minmax(min(100%,230px),1fr))}
-  .card{background:var(--bg2);border:1px solid var(--line);border-radius:11px;padding:clamp(13px,1.5vw,20px)}
-  .card h4{font-size:clamp(14px,1.4vw,18px);margin-bottom:.45em;color:#fff}
-  .card p,.card li{font-size:clamp(13px,1.3vw,17px);color:var(--dim)}
-  .card.acc{border-left:3px solid var(--acc)} .card.ok{border-left:3px solid var(--ok)}
-  .card.warn{border-left:3px solid var(--warn)} .card.bad{border-left:3px solid var(--bad)}
-  .card.pur{border-left:3px solid var(--acc2)}
-  table{width:100%;border-collapse:collapse;margin:.7em 0;font-size:clamp(12px,1.3vw,17px)}
-  th,td{text-align:left;padding:.5em .7em;border-bottom:1px solid var(--line);vertical-align:top}
-  th{color:var(--acc);font-family:var(--mono);font-size:.82em;text-transform:uppercase;letter-spacing:.07em}
-  td{color:var(--dim)} td:first-child{color:var(--fg);font-family:var(--mono);white-space:nowrap}
-  .diagram{font-family:var(--mono);background:var(--code);border:1px solid var(--line);
-    border-radius:9px;padding:clamp(12px,1.6vw,22px);overflow-x:auto;
-    font-size:clamp(10px,1.15vw,15px);line-height:1.5;color:#b9c7db;white-space:pre}
-  .big{font-size:clamp(40px,7vw,86px);font-weight:700;letter-spacing:-.03em;line-height:1}
-  .pill{display:inline-block;font-family:var(--mono);font-size:.78em;padding:.2em .7em;
-    border-radius:999px;border:1px solid var(--line);background:var(--bg2);color:var(--dim);margin:.15em .2em}
-  .pill.on{border-color:var(--ok);color:var(--ok)}
-  .pill.off{border-color:var(--bad);color:var(--bad)}
-  .note{border-left:3px solid var(--warn);background:rgba(251,191,36,.06);
-    padding:.75em 1.1em;border-radius:0 8px 8px 0;margin:.8em 0;
-    font-size:clamp(13px,1.35vw,18px);color:#e8dcc0}
-  .note.bad{border-color:var(--bad);background:rgba(248,113,113,.07);color:#f0d4d4}
-  .note.ok{border-color:var(--ok);background:rgba(74,222,128,.06);color:#d3ecd9}
-  footer{position:fixed;bottom:0;left:0;right:0;display:flex;justify-content:space-between;
-    align-items:center;padding:10px 20px;font-family:var(--mono);font-size:12px;
-    color:#4d5768;background:linear-gradient(transparent,rgba(11,14,20,.95) 45%);z-index:50}
-  #bar{position:fixed;top:0;left:0;height:2px;background:var(--acc);z-index:60;transition:width .25s}
-  #nav{position:fixed;bottom:8px;left:50%;transform:translateX(-50%);display:flex;gap:6px;z-index:60}
-  #nav button{background:var(--bg2);border:1px solid var(--line);color:var(--dim);
-    width:30px;height:26px;border-radius:6px;cursor:pointer;font-size:13px;line-height:1}
-  #nav button:hover{border-color:var(--acc);color:var(--acc)}
-  .center{text-align:center;align-items:center}
-  .center ul,.center ol{text-align:left;display:inline-block}
-  #ov{position:fixed;inset:0;background:rgba(5,7,11,.97);z-index:100;display:none;
-    overflow-y:auto;padding:22px}
+
+  .slide{position:absolute;inset:0;display:none;background:var(--bg);overflow:hidden}
+  .slide.active{display:flex;flex-direction:column;animation:in .25s ease-out}
+  @keyframes in{from{opacity:0}to{opacity:1}}
+
+  /* top band: heading sits in a blue gradient bar, logo right */
+  .hband{flex:0 0 auto;min-height:clamp(56px,11vh,92px);
+    background:linear-gradient(105deg,var(--b-hi) 0%,var(--b-mid) 45%,var(--b-lo) 100%);
+    display:flex;align-items:center;justify-content:space-between;
+    padding:0 clamp(20px,3.4vw,52px) 0 clamp(22px,3.8vw,58px)}
+  .hband h2{color:#fff;font-size:clamp(17px,2.5vw,31px);font-weight:600;letter-spacing:.01em;line-height:1.2}
+  .logo-w{background:url("data:image/png;base64,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") no-repeat center/contain;
+    height:clamp(34px,6.4vh,58px);aspect-ratio:520/230;flex:0 0 auto}
+  .logo-n{background:url("data:image/png;base64,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") no-repeat center/contain;
+    height:clamp(30px,5.6vh,50px);aspect-ratio:209/84;flex:0 0 auto}
+
+  /* side band: section dividers and demos */
+  .sband{position:absolute;left:0;top:0;bottom:0;width:clamp(120px,26vw,330px);
+    background:linear-gradient(160deg,var(--b-mid) 0%,var(--b-hi) 78%,#3E47FF 100%);
+    display:flex;align-items:flex-end;padding:clamp(10px,2vh,20px) clamp(10px,1.6vw,22px)}
+  .sband .copy{color:#fff;font-size:clamp(8px,.85vw,11px);opacity:.92;letter-spacing:.02em}
+  .smain{margin-left:clamp(120px,26vw,330px);flex:1;display:flex;flex-direction:column;
+    padding:clamp(18px,4vh,44px) clamp(24px,4.5vw,72px) clamp(34px,6vh,58px)}
+  .smain .logo-n{position:absolute;top:clamp(14px,3vh,30px);right:clamp(20px,3.4vw,52px)}
+
+  .body{flex:1;overflow:hidden;padding:clamp(14px,3vh,34px) clamp(24px,4.6vw,74px) clamp(30px,5.4vh,50px);
+    display:flex;flex-direction:column;justify-content:center}
+  .foot{flex:0 0 auto;display:flex;justify-content:space-between;align-items:center;
+    padding:0 clamp(20px,3.4vw,52px) clamp(8px,1.6vh,15px);
+    font-size:clamp(8px,.9vw,11.5px);color:var(--grey)}
+  .foot .pg{font-variant-numeric:tabular-nums}
+
+  h1{color:#fff;font-size:clamp(28px,5vw,60px);font-weight:600;line-height:1.12;letter-spacing:.005em}
+  .big-h{color:var(--head);font-size:clamp(24px,4vw,50px);font-weight:400;letter-spacing:.01em;margin-bottom:.4em}
+  h3{color:var(--head);font-size:clamp(13px,1.5vw,19px);font-weight:600;margin:.8em 0 .3em;letter-spacing:.02em}
+  p,li{font-size:clamp(12.5px,1.42vw,19px);line-height:1.5;color:var(--ink)}
+  .dim{color:var(--grey)}
+  .white{color:#fff}
+  strong{font-weight:650}
+  em{color:var(--head);font-style:normal;font-weight:600}
+  ul{list-style:none;margin:.3em 0}
+  ul li{position:relative;padding-left:1.5em;margin:.42em 0}
+  ul li::before{content:"➤";position:absolute;left:0;top:.06em;color:var(--head);font-size:.82em}
+  ol{margin:.3em 0 .3em 1.4em}
+  ol li{margin:.45em 0}
+  code{font-family:var(--mono);font-size:.86em;background:#EEF1FB;border:1px solid var(--peri);
+    border-radius:4px;padding:.1em .4em;color:var(--navy);white-space:nowrap}
+  pre{background:var(--code-bg);border-radius:8px;padding:clamp(9px,1.5vh,16px) clamp(12px,1.5vw,20px);
+    overflow:auto;margin:.5em 0;max-width:100%;border-left:4px solid var(--b-hi)}
+  pre code{background:none;border:none;padding:0;white-space:pre;color:var(--code-ink);
+    font-size:clamp(9.5px,1.08vw,14.5px);line-height:1.5}
+  .k{color:var(--code-key)} .s{color:var(--code-str)} .n{color:var(--code-num)} .c{color:var(--code-cmt)}
+
+  table{width:100%;border-collapse:collapse;margin:.5em 0;font-size:clamp(11px,1.22vw,16.5px)}
+  th,td{text-align:left;padding:.42em .6em;border-bottom:1px solid var(--peri);vertical-align:top}
+  th{color:var(--head);font-weight:600;font-size:.86em;text-transform:uppercase;letter-spacing:.06em}
+  td{color:var(--grey)} td:first-child{color:var(--ink);font-family:var(--mono);font-size:.94em;white-space:nowrap}
+  td b{color:var(--ink)}
+
+  .grid{display:grid;gap:clamp(10px,1.4vw,20px);margin-top:.4em}
+  .g2{grid-template-columns:repeat(auto-fit,minmax(min(100%,280px),1fr))}
+  .g3{grid-template-columns:repeat(auto-fit,minmax(min(100%,210px),1fr))}
+  .card{background:#fff;border:1px solid var(--peri);border-radius:8px;
+    padding:clamp(10px,1.4vw,18px);box-shadow:0 1px 3px rgba(0,0,153,.07)}
+  .card h4{font-size:clamp(12.5px,1.35vw,17.5px);margin-bottom:.35em;color:var(--navy);font-weight:650}
+  .card p,.card li{font-size:clamp(11.5px,1.22vw,16px);color:var(--grey)}
+  .card.acc{border-left:4px solid var(--b-hi)} .card.ok{border-left:4px solid var(--green)}
+  .card.warn{border-left:4px solid var(--coral)} .card.lim{border-left:4px solid var(--lime)}
+  .card.navy{background:var(--navy);border-color:var(--navy)}
+  .card.navy h4{color:#fff} .card.navy p,.card.navy li{color:var(--peri)}
+
+  .callout{border:2px solid var(--b-hi);border-radius:10px;background:#fff;
+    padding:clamp(10px,1.7vh,20px) clamp(14px,2vw,28px);text-align:center;margin:.6em auto;max-width:46em}
+  .callout p{color:var(--head);font-size:clamp(13px,1.5vw,20px);font-weight:600;line-height:1.45}
+  .note{border-left:4px solid var(--lime);background:#FBFCE8;padding:.6em 1em;border-radius:0 6px 6px 0;
+    margin:.55em 0;font-size:clamp(11.5px,1.28vw,17px);color:#4a4d10}
+  .note.warn{border-color:var(--coral);background:#FDF1EC;color:#6b3320}
+  .note.blue{border-color:var(--b-hi);background:#F0F2FF;color:#1c2160}
+  .pill{display:inline-block;font-size:clamp(9px,1vw,13px);padding:.35em 1.4em;border:1.5px solid #fff;
+    border-radius:999px;color:#fff;letter-spacing:.08em;text-transform:uppercase}
+  .diagram{font-family:var(--mono);background:var(--code-bg);border-radius:8px;
+    padding:clamp(10px,1.6vh,18px) clamp(12px,1.5vw,20px);overflow:auto;white-space:pre;
+    font-size:clamp(8.5px,1vw,13.5px);line-height:1.45;color:var(--code-ink);border-left:4px solid var(--b-hi)}
+
+  /* title slide */
+  .title{background:linear-gradient(115deg,var(--b-hi) 0%,var(--b-mid) 42%,var(--b-lo) 100%);
+    align-items:center;justify-content:center;text-align:center}
+  .title .logo-w{height:clamp(52px,11vh,96px);margin-bottom:clamp(18px,5vh,52px)}
+  .title h1{max-width:20em;margin:0 auto}
+  .title .sub{color:var(--peri);font-size:clamp(13px,1.7vw,22px);margin-top:clamp(10px,2.6vh,26px);
+    max-width:34em;line-height:1.5}
+  .title .pills{margin-top:clamp(16px,4vh,40px)}
+  .title .pills .pill{margin:0 .3em}
+
+  #bar{position:fixed;top:0;left:0;height:3px;background:var(--lime);z-index:60;transition:width .25s}
+  #nav{position:fixed;bottom:6px;left:50%;transform:translateX(-50%);display:flex;gap:5px;z-index:70}
+  #nav button{background:#fff;border:1px solid var(--peri);color:var(--navy);width:28px;height:24px;
+    border-radius:5px;cursor:pointer;font-size:12px;line-height:1}
+  #nav button:hover{background:var(--peri)}
+  #ov{position:fixed;inset:0;background:rgba(13,16,48,.97);z-index:100;display:none;overflow-y:auto;padding:20px}
   #ov.on{display:block}
-  #ovgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(215px,1fr));gap:11px}
-  .thumb{background:var(--bg2);border:1px solid var(--line);border-radius:9px;padding:11px 13px;
-    cursor:pointer;transition:border-color .15s}
-  .thumb:hover{border-color:var(--acc)}
-  .thumb .n{font-family:var(--mono);font-size:11px;color:var(--acc)}
-  .thumb .t{font-size:13.5px;color:var(--fg);margin-top:3px;line-height:1.35}
+  #ovgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px}
+  .thumb{background:#fff;border:1px solid var(--peri);border-radius:7px;padding:9px 11px;cursor:pointer}
+  .thumb:hover{border-color:var(--b-hi)}
+  .thumb .n{font-family:var(--mono);font-size:10px;color:var(--head)}
+  .thumb .t{font-size:12.5px;color:var(--ink);margin-top:3px;line-height:1.35}
   @media print{
-    html,body{overflow:visible;background:#fff;color:#000}
-    .slide{display:flex!important;position:relative;page-break-after:always;height:auto;min-height:92vh}
-    footer,#nav,#bar,#ov{display:none!important}
+    html,body{overflow:visible;background:#fff}
+    .slide{display:flex!important;position:relative;page-break-after:always;height:auto;min-height:96vh}
+    #nav,#bar,#ov{display:none!important}
   }
 </style>
 </head>
@@ -98,69 +149,76 @@
 <div id="bar"></div>
 <div id="deck">
 
-<!-- 1 -->
-<section class="slide center">
-  <div class="kicker">MHP · UBB — AI Workshop</div>
+<!-- 1 · TITLE -->
+<section class="slide title">
+  <div class="logo-w"></div>
   <h1>qwen serve</h1>
   <p class="sub">Turning a terminal coding agent into a daemon you can reach from a browser, a phone, or another machine.</p>
-  <p style="margin-top:2em"><span class="pill">Qwen Code v0.25.1</span><span class="pill">stage&nbsp;1 experimental</span><span class="pill">flag: --http-bridge</span></p>
-</section>
-
-<!-- 2 -->
-<section class="slide">
-  <div class="kicker">The problem</div>
-  <h2>Your agent lives in a terminal</h2>
-  <div class="grid g2">
-    <div class="card bad">
-      <h4>What that costs you</h4>
-      <ul>
-        <li>Tied to one window on one machine</li>
-        <li>Close the laptop lid &rarr; the run dies</li>
-        <li>No way to watch a long job from elsewhere</li>
-        <li>Nothing to script against</li>
-        <li>One session, one user, one SSH tab</li>
-      </ul>
-    </div>
-    <div class="card ok">
-      <h4>What <code>qwen serve</code> gives you</h4>
-      <ul>
-        <li>An HTTP daemon with a real API</li>
-        <li>A browser UI (the Web Shell)</li>
-        <li>Sessions that survive a page refresh</li>
-        <li>Access from a phone on the same network</li>
-        <li>Many concurrent sessions</li>
-      </ul>
-    </div>
+  <div class="pills">
+    <span class="pill">Qwen Code v0.25.1</span>
+    <span class="pill">Stage 1 experimental</span>
+    <span class="pill">--http-bridge</span>
   </div>
-  <div class="note">One command changes the deployment shape: <code>qwen</code> is a process you watch. <code>qwen serve</code> is a service you talk to.</div>
 </section>
 
-<!-- 3 -->
+<!-- 2 · PROBLEM -->
 <section class="slide">
-  <div class="kicker">Start here</div>
-  <h2>The whole thing in one command</h2>
-<pre><code><span class="cmt"># loopback, no auth needed, Web Shell on by default</span>
-<span class="kw">qwen</span> serve
-
-<span class="cmt"># it prints something like:</span>
-<span class="cmt">#   Web Shell:  http://127.0.0.1:4170</span>
-<span class="cmt">#   API:        http://127.0.0.1:4170/session</span></code></pre>
-  <p>Defaults, straight from <code>qwen serve --help</code>:</p>
-  <table>
-    <tr><th>flag</th><th>default</th><th>meaning</th></tr>
-    <tr><td>--port</td><td>4170</td><td>TCP port. <code>0</code> asks the OS for a free one.</td></tr>
-    <tr><td>--hostname</td><td>127.0.0.1</td><td>Loopback &rarr; auth-free. Anything else &rarr; token required.</td></tr>
-    <tr><td>--web</td><td>true</td><td>Serve the browser UI. <code>--no-web</code> = API only.</td></tr>
-    <tr><td>--http-bridge</td><td>true</td><td>Preheats a <code>qwen --acp</code> child process.</td></tr>
-    <tr><td>--max-sessions</td><td>32</td><td>Concurrent live sessions before 503.</td></tr>
-  </table>
+  <header class="hband"><h2>Your agent lives in a terminal</h2><div class="logo-w"></div></header>
+  <div class="body">
+    <div class="grid g2">
+      <div class="card warn">
+        <h4>What that costs you</h4>
+        <ul>
+          <li>Tied to one window on one machine</li>
+          <li>Close the laptop lid → the run dies</li>
+          <li>No way to watch a long job from elsewhere</li>
+          <li>Nothing to script against</li>
+          <li>One session, one user, one SSH tab</li>
+        </ul>
+      </div>
+      <div class="card ok">
+        <h4>What <code>qwen serve</code> gives you</h4>
+        <ul>
+          <li>An HTTP daemon with a real API</li>
+          <li>A browser UI — the Web Shell</li>
+          <li>Sessions that survive a page refresh</li>
+          <li>Access from a phone on the same network</li>
+          <li>Many concurrent sessions</li>
+        </ul>
+      </div>
+    </div>
+    <div class="callout" style="margin-top:1em"><p>One command changes the deployment shape: <code>qwen</code> is a process you watch. <code>qwen serve</code> is a service you talk to.</p></div>
+  </div>
+  <div class="foot"><span>© MHP Management- und IT-Beratung GmbH</span><span class="pg"></span></div>
 </section>
 
-<!-- 4 -->
+<!-- 3 · ONE COMMAND -->
 <section class="slide">
-  <div class="kicker">Architecture</div>
-  <h2>What actually starts</h2>
-  <div class="diagram">            you
+  <header class="hband"><h2>The whole thing in one command</h2><div class="logo-w"></div></header>
+  <div class="body">
+<pre><code><span class="c"># loopback, no auth needed, Web Shell on by default</span>
+<span class="k">qwen</span> serve
+
+<span class="c"># it prints something like:</span>
+<span class="c">#   Web Shell:  http://127.0.0.1:4170</span>
+<span class="c">#   API:        http://127.0.0.1:4170/session</span></code></pre>
+    <table>
+      <tr><th>flag</th><th>default</th><th>meaning</th></tr>
+      <tr><td>--port</td><td>4170</td><td>TCP port. <code>0</code> asks the OS for a free one.</td></tr>
+      <tr><td>--hostname</td><td>127.0.0.1</td><td>Loopback → auth-free. Anything else → token required.</td></tr>
+      <tr><td>--web</td><td>true</td><td>Serve the browser UI. <code>--no-web</code> = API only.</td></tr>
+      <tr><td>--http-bridge</td><td>true</td><td>Preheats a <code>qwen --acp</code> child process.</td></tr>
+      <tr><td>--max-sessions</td><td>32</td><td>Concurrent live sessions before 503.</td></tr>
+    </table>
+  </div>
+  <div class="foot"><span>© MHP Management- und IT-Beratung GmbH</span><span class="pg"></span></div>
+</section>
+
+<!-- 4 · ARCHITECTURE -->
+<section class="slide">
+  <header class="hband"><h2>What actually starts</h2><div class="logo-w"></div></header>
+  <div class="body">
+    <div class="diagram">            you
              │
    ┌─────────┴──────────┬─────────────────────┐
    │                    │                     │
@@ -180,245 +238,270 @@ browser             curl / script         another qwen
               │  qwen --acp child  │   the real agent runtime
               │  tools, MCP, skills│   one per session
               └────────────────────┘</div>
-  <div class="note">Stage 1 spawns a child process per session. The help text is explicit that <strong>stage 2 native in-process mode is not yet implemented</strong>, and <code>--http-bridge</code> will become opt-in then. Treat the internals as moving.</div>
-</section>
-
-<!-- 5 -->
-<section class="slide">
-  <div class="kicker">Security — the most important slide</div>
-  <h2>Loopback is trusted. Everything else is not.</h2>
-  <div class="grid g2">
-    <div class="card ok">
-      <h4>Bind 127.0.0.1 <span class="pill on">default</span></h4>
-      <p>Auth-free by design. Only processes on your machine can reach it.</p>
-<pre style="margin-top:.6em"><code><span class="kw">qwen</span> serve</code></pre>
-    </div>
-    <div class="card warn">
-      <h4>Bind anything else <span class="pill off">token required</span></h4>
-      <p>A LAN IP requires a bearer token. With neither <code>--token</code> nor <code>QWEN_SERVER_TOKEN</code>, one is <em>generated at startup</em>.</p>
-<pre style="margin-top:.6em"><code><span class="kw">qwen</span> serve <span class="flg">--hostname</span> 192.168.1.20</code></pre>
-    </div>
+    <div class="note">Stage 1 spawns a child process per session. The help text is explicit that <strong>stage 2 native in-process mode is not yet implemented</strong>, and <code>--http-bridge</code> will become opt-in then. Treat the internals as moving.</div>
   </div>
-  <div class="note bad"><strong>Read the help text carefully:</strong> "Loopback (127.0.0.0/8, localhost, ::1, [::1]) is auth-free; anything else requires a token." An agent that can run shell commands, exposed on your network without a token, is not a small mistake. <code>--require-auth</code> forces a token even on loopback — use it on shared dev boxes and CI runners, where any local user can hit 127.0.0.1.</div>
+  <div class="foot"><span>© MHP Management- und IT-Beratung GmbH</span><span class="pg"></span></div>
 </section>
 
-<!-- 6 -->
+<!-- 5 · SECURITY -->
 <section class="slide">
-  <div class="kicker">Security, continued</div>
-  <h2>Three settings that bite people</h2>
-  <div class="grid g3">
-    <div class="card warn">
-      <h4>--allow-origin</h4>
-      <p>Browser clients send an <code>Origin</code> header. If it is not on the allowlist the daemon <strong>403s every request</strong> — including all the ones from your phone.</p>
-<pre><code><span class="flg">--allow-origin</span> \
+  <header class="hband"><h2>Loopback is trusted. Everything else is not.</h2><div class="logo-w"></div></header>
+  <div class="body">
+    <div class="grid g2">
+      <div class="card ok">
+        <h4>Bind 127.0.0.1 <span class="pill" style="border-color:var(--green);color:var(--green)">default</span></h4>
+        <p>Auth-free by design. Only processes on your machine can reach it.</p>
+<pre style="margin-top:.6em"><code><span class="k">qwen</span> serve</code></pre>
+      </div>
+      <div class="card warn">
+        <h4>Bind anything else <span class="pill" style="border-color:var(--coral);color:var(--coral)">token required</span></h4>
+        <p>A LAN IP requires a bearer token. With neither <code>--token</code> nor <code>QWEN_SERVER_TOKEN</code>, one is <em>generated at startup</em>.</p>
+<pre style="margin-top:.6em"><code><span class="k">qwen</span> serve <span class="k">--hostname</span> 192.168.1.20</code></pre>
+      </div>
+    </div>
+    <div class="note warn"><strong>Read the help text carefully:</strong> "Loopback (127.0.0.0/8, localhost, ::1, [::1]) is auth-free; anything else requires a token." An agent that can run shell commands, exposed on your network without a token, is not a small mistake. <code>--require-auth</code> forces a token even on loopback — use it on shared dev boxes and CI runners.</div>
+  </div>
+  <div class="foot"><span>© MHP Management- und IT-Beratung GmbH</span><span class="pg"></span></div>
+</section>
+
+<!-- 6 · THREE SETTINGS -->
+<section class="slide">
+  <header class="hband"><h2>Three settings that bite people</h2><div class="logo-w"></div></header>
+  <div class="body">
+    <div class="grid g3">
+      <div class="card warn">
+        <h4>--allow-origin</h4>
+        <p>Browser clients send an <code>Origin</code> header. If it is not on the allowlist the daemon <strong>403s every request</strong> — including all the ones from your phone.</p>
+<pre><code><span class="k">--allow-origin</span> \
   http://192.168.1.20:4170</code></pre>
-    </div>
-    <div class="card warn">
-      <h4>--tls-cert / --tls-key</h4>
-      <p>Browsers only allow the microphone on a <em>secure context</em>. Over a LAN IP that means HTTPS, or voice input silently does not work.</p>
-<pre><code><span class="cmt"># mkcert makes a local cert</span>
-<span class="flg">--tls-cert</span> cert.pem \
-<span class="flg">--tls-key</span> key.pem</code></pre>
-    </div>
-    <div class="card bad">
-      <h4>--enable-session-shell</h4>
-      <p>Turns on direct <code>POST /session/:id/shell</code> — arbitrary command execution over HTTP. Off by default. Leave it off unless you have a real reason.</p>
-    </div>
-  </div>
-</section>
-
-<!-- 7 -->
-<section class="slide">
-  <div class="kicker">A real trade-off</div>
-  <h2><code>--local-control</code> vs a static token</h2>
-  <div class="grid g2">
-    <div class="card pur">
-      <h4>--local-control</h4>
-      <ul>
-        <li>Shares the Web Shell on your LAN</li>
-        <li>Mints its own <em>revocable</em> pairing token</li>
-        <li>Prints a QR code in the terminal</li>
-        <li>Best-effort sleep inhibition</li>
-        <li>Settings card can turn it off while the daemon lives</li>
-      </ul>
-      <p style="margin-top:.7em;color:var(--bad)"><strong>But:</strong> the pairing token is minted in memory and revoked at stop. Restart &rarr; <strong>new token</strong> &rarr; every bookmarked URL breaks.</p>
-    </div>
-    <div class="card acc">
-      <h4>Static bind</h4>
-<pre><code><span class="kw">qwen</span> serve \
-  <span class="flg">--hostname</span> 192.168.1.20 \
-  <span class="flg">--token</span> <span class="str">"$QWEN_SERVER_TOKEN"</span> \
-  <span class="flg">--allow-origin</span> http://192.168.1.20:4170</code></pre>
-      <ul>
-        <li>Token comes from you, so it <strong>survives restarts</strong></li>
-        <li>Bookmark <code>http://IP:4170/#token=…</code> once, forever</li>
-        <li>No QR — you manage the secret yourself</li>
-      </ul>
+      </div>
+      <div class="card warn">
+        <h4>--tls-cert / --tls-key</h4>
+        <p>Browsers only allow the microphone on a <em>secure context</em>. Over a LAN IP that means HTTPS, or voice input silently does not work.</p>
+<pre><code><span class="c"># mkcert makes a local cert</span>
+<span class="k">--tls-cert</span> cert.pem \
+<span class="k">--tls-key</span> key.pem</code></pre>
+      </div>
+      <div class="card warn">
+        <h4>--enable-session-shell</h4>
+        <p>Turns on direct <code>POST /session/:id/shell</code> — arbitrary command execution over HTTP. Off by default. <strong>Leave it off</strong> unless you have a real reason.</p>
+      </div>
     </div>
   </div>
-  <div class="note ok"><strong>Rule of thumb:</strong> ad-hoc demo to a room &rarr; <code>--local-control</code> and scan the QR. Persistent setup you will come back to &rarr; static token. Also note <code>--open</code> hands a token-bearing URL to the browser launcher, which is <em>visible in the process list</em> — open it manually on a multi-user host.</div>
+  <div class="foot"><span>© MHP Management- und IT-Beratung GmbH</span><span class="pg"></span></div>
 </section>
 
-<!-- 8 -->
+<!-- 7 · LOCAL CONTROL VS STATIC -->
 <section class="slide">
-  <div class="kicker">Sessions</div>
-  <h2>Sessions outlive your browser tab</h2>
-  <p>The Web Shell talks to the daemon over <strong>Server-Sent Events</strong>. Drop the connection, reconnect, and it replays what you missed:</p>
-<pre><code><span class="kw">GET</span> /session/:id/events
-<span class="kw">Last-Event-ID</span>: 4182        <span class="cmt">← resume from here</span></code></pre>
-  <div class="grid g2" style="margin-top:.8em">
-    <div class="card">
-      <h4>The replay ring</h4>
-      <p><code>--event-ring-size</code> (default <strong>8000</strong>) is how much history a reconnect can recover. Bigger = more headroom, a few hundred KB extra RAM per session.</p>
+  <header class="hband"><h2>--local-control vs a static token</h2><div class="logo-w"></div></header>
+  <div class="body">
+    <div class="grid g2">
+      <div class="card lim">
+        <h4>--local-control</h4>
+        <ul>
+          <li>Shares the Web Shell on your LAN</li>
+          <li>Mints its own <em>revocable</em> pairing token</li>
+          <li>Prints a QR code in the terminal</li>
+          <li>Best-effort sleep inhibition</li>
+        </ul>
+        <p style="margin-top:.6em;color:var(--coral)"><strong>But:</strong> the pairing token is minted in memory and revoked at stop. Restart → <strong>new token</strong> → every bookmarked URL breaks.</p>
+      </div>
+      <div class="card acc">
+        <h4>Static bind</h4>
+<pre><code><span class="k">qwen</span> serve \
+  <span class="k">--hostname</span> 192.168.1.20 \
+  <span class="k">--token</span> <span class="s">"$QWEN_SERVER_TOKEN"</span> \
+  <span class="k">--allow-origin</span> http://192.168.1.20:4170</code></pre>
+        <ul>
+          <li>Token comes from you, so it <strong>survives restarts</strong></li>
+          <li>Bookmark <code>http://IP:4170/#token=…</code> once, forever</li>
+          <li>No QR — you manage the secret yourself</li>
+        </ul>
+      </div>
     </div>
-    <div class="card">
-      <h4>Late attach</h4>
-      <p><code>POST /session/:id/load</code> hands a joining client a compacted snapshot. <code>--compacted-replay-max-bytes</code> caps it (max 256 MiB).</p>
+    <div class="note blue"><strong>Rule of thumb:</strong> ad-hoc demo to a room → <code>--local-control</code>, scan the QR. Persistent setup you will come back to → static token. And note <code>--open</code> hands a token-bearing URL to the browser launcher, <em>visible in the process list</em> — open it manually on a multi-user host.</div>
+  </div>
+  <div class="foot"><span>© MHP Management- und IT-Beratung GmbH</span><span class="pg"></span></div>
+</section>
+
+<!-- 8 · SESSIONS -->
+<section class="slide">
+  <header class="hband"><h2>Sessions outlive your browser tab</h2><div class="logo-w"></div></header>
+  <div class="body">
+    <p>The Web Shell talks to the daemon over <strong>Server-Sent Events</strong>. Drop the connection, reconnect, and it replays what you missed:</p>
+<pre><code><span class="k">GET</span> /session/:id/events
+<span class="k">Last-Event-ID</span>: <span class="n">4182</span>        <span class="c">← resume from here</span></code></pre>
+    <div class="grid g2" style="margin-top:.6em">
+      <div class="card acc">
+        <h4>The replay ring</h4>
+        <p><code>--event-ring-size</code> (default <strong>8000</strong>) is how much history a reconnect can recover. Bigger = more headroom, a few hundred KB extra RAM per session.</p>
+      </div>
+      <div class="card acc">
+        <h4>Late attach</h4>
+        <p><code>POST /session/:id/load</code> hands a joining client a compacted snapshot. <code>--compacted-replay-max-bytes</code> caps it (max 256 MiB).</p>
+      </div>
+    </div>
+    <div class="note">This is the feature that makes it feel like a real service rather than a toy. Refresh the page on your phone mid-run and you are back where you were.</div>
+  </div>
+  <div class="foot"><span>© MHP Management- und IT-Beratung GmbH</span><span class="pg"></span></div>
+</section>
+
+<!-- 9 · LIMITS -->
+<section class="slide">
+  <header class="hband"><h2>It refuses work rather than dying</h2><div class="logo-w"></div></header>
+  <div class="body">
+    <table>
+      <tr><th>flag</th><th>default</th><th>what it protects</th></tr>
+      <tr><td>--max-sessions</td><td>32</td><td>Concurrent live sessions; beyond it, new spawns get <code>503</code>. Attaching to existing ones still works.</td></tr>
+      <tr><td>--max-total-sessions</td><td>—</td><td>Same cap across <em>all</em> workspace runtimes.</td></tr>
+      <tr><td>--max-pending-prompts-per-session</td><td>5</td><td>Queued prompts per session; excess get <code>503</code>.</td></tr>
+      <tr><td>--max-connections</td><td>256</td><td>Raw TCP sockets. Slow or phantom SSE clients are rejected at accept time.</td></tr>
+      <tr><td>--prompt-deadline-ms</td><td>—</td><td>Server-side wallclock cap on a prompt.</td></tr>
+      <tr><td>--mcp-client-budget</td><td>—</td><td>Live MCP clients per workspace. <code>--mcp-budget-mode</code> chooses warn / enforce / off.</td></tr>
+    </table>
+    <p class="dim"><code>0</code> disables a cap. Note the difference between <em>warn</em> (observability only) and <em>enforce</em> (refuses) — boot rejects <code>enforce</code> without a budget set.</p>
+  </div>
+  <div class="foot"><span>© MHP Management- und IT-Beratung GmbH</span><span class="pg"></span></div>
+</section>
+
+<!-- 10 · MEMORY -->
+<section class="slide">
+  <header class="hband"><h2>A memory budget, not a hope</h2><div class="logo-w"></div></header>
+  <div class="body">
+    <div class="grid g2">
+      <div class="card acc">
+        <h4>--memory-budget-mb</h4>
+        <p>Total budget for the daemon <em>process tree</em>. Unset, derived as <strong>50% of cgroup-constrained or host memory</strong>, capped at available. Range 1024–1048576.</p>
+      </div>
+      <div class="card">
+        <h4>--memory-pressure-mode</h4>
+        <p><code>observe</code> (default) reports the level and raises a status issue when it leaves normal. <code>off</code> reports figures, raises nothing. <strong>Nothing remediates in either mode.</strong></p>
+      </div>
+      <div class="card">
+        <h4>--child-heap-mode</h4>
+        <p><code>observe</code> models a per-child partition and counts spawns that would exceed it. <code>admit</code> rejects past the limit. <code>enforce</code> is experimental.</p>
+        <p style="margin-top:.4em;color:var(--coral)">A refusal count of 0 does <em>not</em> mean the partition would be safe to apply.</p>
+      </div>
+      <div class="card warn">
+        <h4>Why this matters on a laptop</h4>
+        <p>Each session is a child process with its own V8 heap. Thirty-two sessions is thirty-two heaps. On 16 GB that is the difference between a demo and a freeze.</p>
+      </div>
     </div>
   </div>
-  <div class="note">This is the feature that makes it feel like a real service rather than a toy. Refresh the page on your phone mid-run and you are back where you were.</div>
+  <div class="foot"><span>© MHP Management- und IT-Beratung GmbH</span><span class="pg"></span></div>
 </section>
 
-<!-- 9 -->
+<!-- 11 · WORKSPACES -->
 <section class="slide">
-  <div class="kicker">Limits</div>
-  <h2>It refuses work rather than dying</h2>
-  <table>
-    <tr><th>flag</th><th>default</th><th>what it protects</th></tr>
-    <tr><td>--max-sessions</td><td>32</td><td>Concurrent live sessions; beyond it, new spawns get <code>503</code>. Attaching to existing ones still works.</td></tr>
-    <tr><td>--max-total-sessions</td><td>—</td><td>Same cap across <em>all</em> workspace runtimes.</td></tr>
-    <tr><td>--max-pending-prompts-per-session</td><td>5</td><td>Queued prompts per session; excess get <code>503</code>.</td></tr>
-    <tr><td>--max-connections</td><td>256</td><td>Raw TCP sockets. Slow or phantom SSE clients are rejected at accept time.</td></tr>
-    <tr><td>--prompt-deadline-ms</td><td>—</td><td>Server-side wallclock cap on a prompt.</td></tr>
-    <tr><td>--mcp-client-budget</td><td>—</td><td>Live MCP clients per workspace. <code>--mcp-budget-mode</code> chooses warn / enforce / off.</td></tr>
-  </table>
-  <p class="dim" style="margin-top:.5em"><code>0</code> disables a cap. Note the difference between <em>warn</em> (observability only) and <em>enforce</em> (refuses) — boot rejects <code>enforce</code> without a budget set.</p>
-</section>
-
-<!-- 10 -->
-<section class="slide">
-  <div class="kicker">Memory</div>
-  <h2>A budget, not a hope</h2>
-  <div class="grid g2">
-    <div class="card acc">
-      <h4>--memory-budget-mb</h4>
-      <p>Total budget for the daemon <em>process tree</em>. Unset, it is derived as <strong>50% of cgroup-constrained or host memory</strong>, capped at available memory. Range 1024–1048576.</p>
-      <p style="margin-top:.5em">Also sizes a daemon-wide pool of 5% of the budget (capped at 1024 MB) for replay growth.</p>
-    </div>
-    <div class="card">
-      <h4>--memory-pressure-mode</h4>
-      <p><code>observe</code> (default) reports the level and raises a status issue when it leaves normal. <code>off</code> reports figures but raises nothing. <strong>Nothing remediates in either mode.</strong></p>
-    </div>
-    <div class="card">
-      <h4>--child-heap-mode</h4>
-      <p><code>observe</code> models a per-child partition and counts spawns that would have exceeded it. <code>admit</code> rejects starts past the limit. <code>enforce</code> is experimental.</p>
-      <p style="margin-top:.5em;color:var(--warn)">A refusal count of 0 does <em>not</em> mean the partition would be safe to apply.</p>
-    </div>
-    <div class="card warn">
-      <h4>Why this matters on a laptop</h4>
-      <p>Each session is a child process with its own V8 heap. Thirty-two sessions is thirty-two heaps. On a 16 GB machine that is the difference between a demo and a freeze.</p>
+  <header class="hband"><h2>More than one project, more than one machine</h2><div class="logo-w"></div></header>
+  <div class="body">
+    <h3>Several workspaces on one daemon</h3>
+<pre><code><span class="k">qwen</span> serve <span class="k">--workspace</span> /repos/api <span class="k">--workspace</span> /repos/web</code></pre>
+    <p class="dim">Repeat the flag to register isolated runtimes; the first is primary. A <code>POST /session</code> with a mismatched <code>cwd</code> returns <code>400 workspace_mismatch</code> — it will not let a session wander into the wrong project.</p>
+    <h3>Linking machines</h3>
+    <div class="grid g2">
+      <div class="card lim">
+        <h4>--join</h4>
+        <p>Join another Qwen Code as a runtime, using the one-line link from <em>Agent → Runtime → Add runtime</em>. Your laptop becomes a worker for someone else's daemon.</p>
+      </div>
+      <div class="card lim">
+        <h4>Agent Host</h4>
+        <p><code>--agent-host-server</code>, <code>--agent-host-workspace-id</code>, <code>--agent-host-name</code> register this daemon as a host with a primary. <code>--agent-host-allow-http</code> permits unencrypted connections — <em>trusted demo networks only</em>.</p>
+      </div>
     </div>
   </div>
+  <div class="foot"><span>© MHP Management- und IT-Beratung GmbH</span><span class="pg"></span></div>
 </section>
 
-<!-- 11 -->
+<!-- 12 · RECIPES -->
 <section class="slide">
-  <div class="kicker">Workspaces</div>
-  <h2>More than one project, more than one machine</h2>
-  <h3>Multiple workspaces</h3>
-<pre><code><span class="kw">qwen</span> serve <span class="flg">--workspace</span> /repos/api <span class="flg">--workspace</span> /repos/web</code></pre>
-  <p class="dim">Repeat the flag to register isolated runtimes; the first is primary. A <code>POST /session</code> with a mismatched <code>cwd</code> returns <code>400 workspace_mismatch</code> — it will not let a session wander into the wrong project.</p>
-  <h3>Linking machines</h3>
-  <div class="grid g2">
-    <div class="card pur">
-      <h4>--join</h4>
-      <p>Join another Qwen Code as a runtime, using the one-line link from <em>Agent &rarr; Runtime &rarr; Add runtime</em>. Your laptop becomes a worker for someone else's daemon.</p>
-    </div>
-    <div class="card pur">
-      <h4>Agent Host</h4>
-      <p><code>--agent-host-server</code>, <code>--agent-host-workspace-id</code>, <code>--agent-host-name</code> register this daemon as a host with a primary. <code>--agent-host-allow-http</code> permits unencrypted connections — <em>trusted demo networks only</em>.</p>
-    </div>
+  <header class="hband"><h2>Four ways to run it</h2><div class="logo-w"></div></header>
+  <div class="body">
+    <h3>1 · Local development</h3>
+<pre><code><span class="k">qwen</span> serve                    <span class="c"># loopback, no token, Web Shell on :4170</span></code></pre>
+    <h3>2 · Phone on the same Wi-Fi, ad-hoc</h3>
+<pre><code><span class="k">qwen</span> serve <span class="k">--local-control</span>     <span class="c"># prints a QR — scan it</span></code></pre>
+    <h3>3 · Phone, persistent (survives restarts)</h3>
+<pre><code><span class="k">qwen</span> serve \
+  <span class="k">--hostname</span> 192.168.1.20 \
+  <span class="k">--token</span> <span class="s">"$(cat ~/.qwen-serve-token)"</span> \
+  <span class="k">--allow-origin</span> http://192.168.1.20:4170</code></pre>
+    <h3>4 · Shared dev box or CI</h3>
+<pre><code><span class="k">qwen</span> serve <span class="k">--require-auth</span> <span class="k">--no-web</span> <span class="k">--max-sessions</span> <span class="n">4</span>
+<span class="c"># token enforced even on loopback; API only; small session cap</span></code></pre>
   </div>
-  <p class="dim" style="margin-top:.6em"><code>--memory-project-scope</code> picks how project memory is partitioned: <code>workspace</code> (default, isolated) or <code>git-root</code> (legacy shared).</p>
+  <div class="foot"><span>© MHP Management- und IT-Beratung GmbH</span><span class="pg"></span></div>
 </section>
 
-<!-- 12 -->
-<section class="slide">
-  <div class="kicker">Recipes</div>
-  <h2>Four ways to run it</h2>
-  <h3>1 · Local development</h3>
-<pre><code><span class="kw">qwen</span> serve                    <span class="cmt"># loopback, no token, Web Shell on :4170</span></code></pre>
-  <h3>2 · Phone on the same Wi-Fi, ad-hoc</h3>
-<pre><code><span class="kw">qwen</span> serve <span class="flg">--local-control</span>     <span class="cmt"># prints a QR — scan it</span></code></pre>
-  <h3>3 · Phone, persistent (survives restarts)</h3>
-<pre><code><span class="kw">qwen</span> serve \
-  <span class="flg">--hostname</span> 192.168.1.20 \
-  <span class="flg">--token</span> <span class="str">"$(cat ~/.qwen-serve-token)"</span> \
-  <span class="flg">--allow-origin</span> http://192.168.1.20:4170</code></pre>
-  <h3>4 · Shared dev box or CI</h3>
-<pre><code><span class="kw">qwen</span> serve <span class="flg">--require-auth</span> <span class="flg">--no-web</span> <span class="flg">--max-sessions</span> <span class="num">4</span>
-<span class="cmt"># token enforced even on loopback; API only; small session cap</span></code></pre>
-</section>
-
-<!-- 13 -->
-<section class="slide">
-  <div class="kicker">Live demo</div>
-  <h2>What we will actually run</h2>
-  <ol>
-    <li><strong>Start it.</strong> <code>qwen serve</code> — note the printed URL, note that no token was needed on loopback.</li>
-    <li><strong>Open the Web Shell</strong> in a browser. Start a session against the local model.</li>
-    <li><strong>Kill the network.</strong> Turn off Wi-Fi mid-run, reconnect, and watch the SSE ring replay what you missed.</li>
-    <li><strong>Phone.</strong> Re-run with <code>--local-control</code>, scan the QR, drive the same daemon from a handset.</li>
-    <li><strong>Prove the token.</strong> Re-run on a LAN IP and show the 401 without <code>Authorization</code>, then success with it.</li>
-    <li><strong>Show the ceiling.</strong> <code>--max-sessions 2</code>, open a third, read the <code>503</code>.</li>
-  </ol>
-  <div class="note">Every step above is a behaviour you can read off <code>--help</code>. Nothing requires a GPU, a cloud account, or a model bigger than the 1.7B you already downloaded.</div>
-</section>
-
-<!-- 14 -->
-<section class="slide">
-  <div class="kicker">Fit for purpose</div>
-  <h2>What to use, and what to leave alone</h2>
-  <div class="grid g2">
-    <div class="card ok">
-      <h4>Show these</h4>
-      <ul>
-        <li>Loopback vs LAN auth model</li>
-        <li>Web Shell + phone access</li>
-        <li>SSE replay surviving a refresh</li>
-        <li><code>--max-sessions</code> returning 503</li>
-        <li><code>--workspace</code> isolation</li>
-        <li><code>--local-control</code> QR pairing</li>
-      </ul>
-    </div>
-    <div class="card bad">
-      <h4>Skip these</h4>
-      <ul>
-        <li><code>--profile hosted-harness</code> + capability digests</li>
-        <li>Agent Host control-plane wiring</li>
-        <li><code>--experimental-paired-engines</code></li>
-        <li><code>--child-heap-mode enforce</code></li>
-        <li><code>--enable-session-shell</code></li>
-        <li>Journal byte-cap tuning</li>
-      </ul>
-    </div>
+<!-- 13 · DEMO -->
+<section class="slide side">
+  <div class="sband"><span class="copy">© MHP Management- und IT-Beratung GmbH</span></div>
+  <div class="smain">
+    <div class="logo-n"></div>
+    <h2 class="big-h">What we will actually run</h2>
+    <ol style="font-size:clamp(13px,1.5vw,20px)">
+      <li><strong>Start it.</strong> <code>qwen serve</code> — note the printed URL, and that loopback needed no token.</li>
+      <li><strong>Open the Web Shell</strong> in a browser. Start a session against the local model.</li>
+      <li><strong>Kill the network.</strong> Turn off Wi-Fi mid-run, reconnect, watch the SSE ring replay what you missed.</li>
+      <li><strong>Phone.</strong> Re-run with <code>--local-control</code>, scan the QR, drive the same daemon from a handset.</li>
+      <li><strong>Prove the token.</strong> Re-run on a LAN IP; show the 401 without <code>Authorization</code>, then success with it.</li>
+      <li><strong>Show the ceiling.</strong> <code>--max-sessions 2</code>, open a third, read the <code>503</code>.</li>
+    </ol>
+    <div class="note">Every step is a behaviour you can read off <code>--help</code>. Nothing needs a GPU, a cloud account, or a model bigger than the 1.7B you already downloaded.</div>
   </div>
-  <div class="note">The left column is durable and easy to demonstrate. The right column is private, experimental, or explicitly documented as not-yet-implemented — teaching it would be teaching something that will not survive to next semester.</div>
+  <div class="foot" style="margin-left:clamp(120px,26vw,330px)"><span></span><span class="pg"></span></div>
 </section>
 
-<!-- 15 -->
+<!-- 14 · TEACH VS SKIP -->
 <section class="slide">
-  <div class="kicker">Takeaways</div>
-  <h2>Five things to remember</h2>
-  <ol style="font-size:clamp(16px,1.8vw,24px)">
-    <li style="margin:.7em 0"><code>qwen serve</code> turns an agent from a <em>process</em> into a <em>service</em>.</li>
-    <li style="margin:.7em 0"><strong>Loopback is auth-free; every other bind needs a token.</strong> That single rule is the security model.</li>
-    <li style="margin:.7em 0">A static token survives restarts. A <code>--local-control</code> pairing token does not.</li>
-    <li style="margin:.7em 0">Sessions are durable because of the SSE replay ring — that is why a refresh does not lose your work.</li>
-    <li style="margin:.7em 0">It is stage&nbsp;1 experimental. The API shape is real; the internals will move.</li>
-  </ol>
-  <p class="dim" style="margin-top:1.4em">Read the flags yourself — the help text is unusually good and is the source for everything here:</p>
-<pre><code><span class="kw">qwen</span> serve <span class="flg">--help</span></code></pre>
+  <header class="hband"><h2>What to teach, and what to leave alone</h2><div class="logo-w"></div></header>
+  <div class="body">
+    <div class="grid g2">
+      <div class="card ok">
+        <h4>Show these</h4>
+        <ul>
+          <li>Loopback vs LAN auth model</li>
+          <li>Web Shell + phone access</li>
+          <li>SSE replay surviving a refresh</li>
+          <li><code>--max-sessions</code> returning 503</li>
+          <li><code>--workspace</code> isolation</li>
+          <li><code>--local-control</code> QR pairing</li>
+        </ul>
+      </div>
+      <div class="card warn">
+        <h4>Skip these</h4>
+        <ul>
+          <li><code>--profile hosted-harness</code> + capability digests</li>
+          <li>Agent Host control-plane wiring</li>
+          <li><code>--experimental-paired-engines</code></li>
+          <li><code>--child-heap-mode enforce</code></li>
+          <li><code>--enable-session-shell</code></li>
+          <li>Journal byte-cap tuning</li>
+        </ul>
+      </div>
+    </div>
+    <div class="note">The left column is durable and easy to demonstrate. The right column is private, experimental, or explicitly documented as not-yet-implemented — teaching it means teaching something that will not survive to next semester.</div>
+  </div>
+  <div class="foot"><span>© MHP Management- und IT-Beratung GmbH</span><span class="pg"></span></div>
+</section>
+
+<!-- 15 · TAKEAWAYS -->
+<section class="slide side">
+  <div class="sband"><span class="copy">© MHP Management- und IT-Beratung GmbH</span></div>
+  <div class="smain">
+    <div class="logo-n"></div>
+    <h2 class="big-h">Five things to remember</h2>
+    <ol style="font-size:clamp(14px,1.7vw,23px);max-width:34em">
+      <li style="margin:.6em 0"><code>qwen serve</code> turns an agent from a <em>process</em> into a <em>service</em>.</li>
+      <li style="margin:.6em 0"><strong>Loopback is auth-free; every other bind needs a token.</strong> That single rule is the security model.</li>
+      <li style="margin:.6em 0">A static token survives restarts. A <code>--local-control</code> pairing token does not.</li>
+      <li style="margin:.6em 0">Sessions are durable because of the SSE replay ring — that is why a refresh does not lose your work.</li>
+      <li style="margin:.6em 0">It is stage 1 experimental. The API shape is real; the internals will move.</li>
+    </ol>
+    <p class="dim" style="margin-top:1em">Read the flags yourself — the help text is unusually good and is the source for everything here:</p>
+<pre><code><span class="k">qwen</span> serve <span class="k">--help</span></code></pre>
+  </div>
+  <div class="foot" style="margin-left:clamp(120px,26vw,330px)"><span></span><span class="pg"></span></div>
 </section>
 
 </div>
@@ -429,50 +512,38 @@ browser             curl / script         another qwen
   <button id="grid" title="Overview (O)">&#9638;</button>
   <button id="next" title="Next (→)">&#8250;</button>
 </div>
-<footer><span id="ttl">qwen serve</span><span id="cnt">1 / 1</span></footer>
 
 <script>
 (function(){
   var slides=[].slice.call(document.querySelectorAll('.slide')),i=0;
-  var bar=document.getElementById('bar'),cnt=document.getElementById('cnt'),
-      ttl=document.getElementById('ttl'),ov=document.getElementById('ov'),
+  var bar=document.getElementById('bar'),ov=document.getElementById('ov'),
       grid=document.getElementById('ovgrid');
-
-  function title(s){
-    var h=s.querySelector('h1,h2');
-    return h?h.textContent.trim():'(untitled)';
-  }
+  var today=new Date();
+  var ds=('0'+today.getDate()).slice(-2)+'.'+('0'+(today.getMonth()+1)).slice(-2)+'.'+today.getFullYear();
+  function title(s){var h=s.querySelector('h1,h2');return h?h.textContent.trim().replace(/\s+/g,' '):'(untitled)';}
   function show(n){
     i=Math.max(0,Math.min(slides.length-1,n));
     slides.forEach(function(s,k){s.classList.toggle('active',k===i);});
     bar.style.width=((i+1)/slides.length*100)+'%';
-    cnt.textContent=(i+1)+' / '+slides.length;
-    var t=title(slides[i]);
-    ttl.textContent=(i===0?'qwen serve':t);
-    document.title=(i===0?'qwen serve':t+' — qwen serve');
+    slides[i].querySelectorAll('.pg').forEach(function(p){p.textContent=ds+'   '+(i+1);});
+    document.title=title(slides[i])+' — MHP · qwen serve';
     if(location.hash!=='#'+(i+1)) history.replaceState(null,'','#'+(i+1));
   }
   function next(){show(i+1)} function prev(){show(i-1)}
-
   grid.innerHTML=slides.map(function(s,k){
     return '<div class="thumb" data-k="'+k+'"><div class="n">'+(k+1)+'</div>'+
-           '<div class="t">'+title(s).replace(/</g,'&lt;')+'</div></div>';
-  }).join('');
+           '<div class="t">'+title(s).replace(/</g,'&lt;')+'</div></div>';}).join('');
   grid.addEventListener('click',function(e){
     var t=e.target.closest('.thumb'); if(!t)return;
-    show(+t.dataset.k); ov.classList.remove('on');
-  });
+    show(+t.dataset.k); ov.classList.remove('on');});
   function toggleOv(){ov.classList.toggle('on');}
-
   document.getElementById('next').onclick=next;
   document.getElementById('prev').onclick=prev;
   document.getElementById('grid').onclick=toggleOv;
-
   document.addEventListener('keydown',function(e){
     if(ov.classList.contains('on')&&e.key!=='Escape'&&e.key!=='o'){
       if(e.key==='ArrowRight'||e.key===' '){next();return;}
-      if(e.key==='ArrowLeft'){prev();return;}
-    }
+      if(e.key==='ArrowLeft'){prev();return;}}
     switch(e.key){
       case 'ArrowRight': case 'ArrowDown': case ' ': case 'PageDown': e.preventDefault(); next(); break;
       case 'ArrowLeft': case 'ArrowUp': case 'PageUp': e.preventDefault(); prev(); break;
@@ -481,28 +552,17 @@ browser             curl / script         another qwen
       case 'o': case 'O': case 'Escape': toggleOv(); break;
       case 'f': case 'F':
         if(document.fullscreenElement)document.exitFullscreen();
-        else document.documentElement.requestFullscreen();
-        break;
-    }
-  });
-
-  // click right/left thirds to navigate, but never on a link or button
+        else document.documentElement.requestFullscreen(); break;}});
   document.getElementById('deck').addEventListener('click',function(e){
     if(e.target.closest('a,button,pre,code,input'))return;
     var x=e.clientX/window.innerWidth;
-    if(x>0.66)next(); else if(x<0.18)prev();
-  });
-
-  // touch swipe
+    if(x>0.72)next(); else if(x<0.14)prev();});
   var tx=null;
   document.addEventListener('touchstart',function(e){tx=e.changedTouches[0].clientX;},{passive:true});
   document.addEventListener('touchend',function(e){
     if(tx===null)return;
     var dx=e.changedTouches[0].clientX-tx;
-    if(dx<-50)next(); else if(dx>50)prev();
-    tx=null;
-  },{passive:true});
-
+    if(dx<-50)next(); else if(dx>50)prev(); tx=null;},{passive:true});
   var h=parseInt((location.hash||'').replace('#',''),10);
   show(isNaN(h)?0:h-1);
 })();
