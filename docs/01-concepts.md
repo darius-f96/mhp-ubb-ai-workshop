@@ -262,4 +262,16 @@ Build it one layer at a time, and **verify each layer before adding the next**. 
 
 ---
 
+## Beyond the laptop: from agent to pipeline
+
+Everything so far ends with *you* driving one agent through one session. A **dev pipeline** is what you get when you stop being the loop: the job is split into phases — spec, plan, exec, verify, review — each run as its own agent session, often with a different model per phase, and each phase's output checked by a gate the model cannot argue with: a test suite, a reviewer model, a diff-size check. Only when the gates pass does a pull request get opened.
+
+The distinction changes what you blame. An agent that fails is a model problem. A pipeline that fails is usually a *gate* problem — a missing check, a budget that ran out, or a serving layer below every harness misparsing tool calls.
+
+Real numbers from one such pipeline, 56 jobs on entirely local models: verification passed on the first attempt for **41%** of jobs, and for **88%** after the fix-and-re-review loop. The gap between those two numbers is the entire value of the pipeline — and the reason "the model said it worked" is never accepted as evidence.
+
+You will not build one today; on your laptop the model is the constraint, not the orchestration. But [Exercise 7](../exercises/README.md#exercise-7--build-the-smallest-possible-pipeline-stretch) builds the smallest version — agent, verify gate, retry budget — in twenty lines of bash.
+
+---
+
 **Next:** [02 — llama.cpp: run a model on your laptop](02-llama-cpp.md)

@@ -226,7 +226,7 @@ The request still succeeds, served by the cloud backend. After restarting llama-
 
 ### 0:43 — Exercises (2 min)
 
-Exercises are in `exercises/README.md`: six in total, ending with `answers.md` pushed on a branch (which doubles as a Git exercise).
+Exercises are in `exercises/README.md`: seven in total, ending with `answers.md` pushed on a branch (which doubles as a Git exercise).
 
 Highest-value two: **Exercise 2** (135M vs 1.7B) and **Exercise 6** (agent, local vs cloud).
 

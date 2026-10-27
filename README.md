@@ -61,7 +61,7 @@ Supporting material:
 - [Offline models](docs/offline-models.md) — when the venue Wi-Fi dies
 - [Troubleshooting](docs/troubleshooting.md) — read the error, then read this
 - [Exercises](exercises/) — the graded bits, including a dependency-free [local RAG implementation](exercises/rag/rag.py)
-- Slides — open in any browser, no server needed, MHP-branded: [concepts](slides/concepts.html) (34 slides, the 1h40 lecture) · [qwen serve](slides/qwen-serve.html) (15 slides)
+- Slides — open in any browser, no server needed, MHP-branded: [concepts](slides/concepts.html) (38 slides, the 1h40 lecture) · [qwen serve](slides/qwen-serve.html) (15 slides)
 
 ---
 

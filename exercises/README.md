@@ -1,6 +1,6 @@
 # Exercises
 
-Six exercises. Do them in order — each one assumes the previous stack is running.
+Seven exercises. Do them in order — each one assumes the previous stack is running.
 
 Time budgets assume a 16 GB laptop with no GPU. If you are much faster, do the stretch goals. If you are stuck for more than ten minutes, **ask**. The point is the concepts, not the suffering.
 
@@ -277,6 +277,52 @@ Watch what it does. Then ask it something requiring real reasoning:
 5. **Stretch:** configure one MCP server (a filesystem or Git MCP works well) and have the agent use it. What did the MCP give you that the plain agent did not?
 
 > **Why this matters:** this is the honest conclusion of the workshop. Small local models are genuinely useful for retrieval, extraction, classification and private work — and genuinely not good enough to drive an agent through a real codebase. You now have the experience to say which is which, and the stack to route each job to the right place.
+
+---
+
+## Exercise 7 — Build the smallest possible pipeline (stretch)
+
+**Time:** 30 min · **Goal:** the loop from the last slides of the concepts deck, in twenty lines of bash, on your own machine
+
+Exercise 6 asked what you would need to add to make a small model safe to use unsupervised. This is the smallest honest answer: an agent, a **verify gate that lives outside the agent**, and a retry budget.
+
+```bash
+mkdir -p ~/pipeline-test && cd ~/pipeline-test && git init -q
+```
+
+Save this as `loop.sh`:
+
+```bash
+#!/usr/bin/env bash
+# The smallest dev pipeline: agent + verify gate + retry budget.
+set -uo pipefail
+TASK="$1"
+for attempt in 1 2 3; do
+  echo "--- attempt $attempt ---"
+  qwen --model local-chat --approval-mode yolo \
+    "$TASK Write the tests with unittest (standard library). If a previous attempt failed, its output is in test.log — read it and fix the code."
+  python3 -m unittest -q > test.log 2>&1 && { echo "PASS on attempt $attempt"; exit 0; }
+  echo "verify gate failed:"; tail -n 5 test.log
+done
+echo "FAILED after 3 attempts"; exit 1
+```
+
+Run it in a scratch directory you do not care about — `--approval-mode yolo` means every tool call auto-executes as you:
+
+```bash
+chmod +x loop.sh
+./loop.sh "Create fizzbuzz.py with a fizzbuzz(n) function and test_fizzbuzz.py with three tests."
+```
+
+**Answer these:**
+
+1. How many attempts did your local model need? Did it pass at all?
+2. Which line is the verify gate? Why must it live *outside* the agent, instead of being a step you ask the agent to run?
+3. Delete the `python3 -m unittest` line and run again. What does the agent now report? What does that say about an agent grading its own work?
+4. Run the same loop against a cloud model. Compare attempts needed. Which part changed — the model, or the loop?
+5. Where would you add a *review* phase? What would it read, and what would make it fail the job?
+
+> **Why this matters:** this is the pipeline from the concepts deck stripped to its load-bearing parts. The real thing adds phases, per-phase models and a pull request at the end — but the property that makes it trustworthy is already here: **the agent never grades itself.** If you want `yolo` without it being *you*, [docs/05](../docs/05-qwen-code.md) shows `--sandbox`; the gate stays yours either way.
 
 ---
 
