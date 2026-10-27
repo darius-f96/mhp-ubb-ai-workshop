@@ -172,7 +172,7 @@
     <div>Darius Florea<br>Dr. Sergiu Limboi<br>Traian Suciu</div>
     <div>Tudor Mihaita<br>Paul Titieni</div>
   </div>
-  <div class="place"><span class="pill">MHP Cluj-Napoca · 14.04.2026</span></div>
+  <div class="place"><span class="pill">MHP Cluj-Napoca · 14.11.2026</span></div>
 </section>
 
 <!-- 2 · AGENDA -->
@@ -196,7 +196,7 @@
           <li><strong>06</strong>&nbsp; llama-swap, config line by line</li>
           <li><strong>07</strong>&nbsp; LiteLLM, config line by line</li>
           <li><strong>08</strong>&nbsp; Context, KV cache, and RAM</li>
-          <li><strong>09</strong>&nbsp; Tool calling &amp; RAG</li>
+          <li><strong>09</strong>&nbsp; Tool calling</li>
           <li><strong>10</strong>&nbsp; Honest expectations</li>
           <li><strong>11</strong>&nbsp; From agent to pipeline</li>
         </ul>
@@ -304,7 +304,7 @@
       </div>
     </div>
     <h3>Where they come from</h3>
-    <p><strong>Hugging Face</strong> is the de facto registry — think npm or Docker Hub, for models. Repos are <code>owner/name</code>; quantised re-uploads end in <code>-GGUF</code>.</p>
+    <p><strong>Hugging Face</strong> (<a href="https://huggingface.co"><code>https://huggingface.co</code></a>) is the de facto registry — think npm or Docker Hub, for models. Repos are <code>owner/name</code>; quantised re-uploads end in <code>-GGUF</code>.</p>
     <div class="note blue">Trust order for a GGUF: the <strong>author's own</strong> repo → <code>ggml-org</code> (the llama.cpp team) → <code>unsloth</code> / <code>bartowski</code>.</div>
   </div>
   <div class="foot"><span>© MHP Management- und IT-Beratung GmbH</span><span class="pg"></span></div>
@@ -356,13 +356,13 @@
     <table>
       <tr><th></th><th>llama.cpp</th><th>vLLM</th></tr>
       <tr><td>Language</td><td>C/C++, no dependencies</td><td>Python + CUDA kernels</td></tr>
-      <tr><td>Hardware</td><td><b>CPU, Metal, any GPU, a phone</b></td><td>NVIDIA GPU (best)</td></tr>
+      <tr><td>Hardware</td><td><b>CPU, Metal, any GPU, a phone</b></td><td>NVIDIA GPU (best); CPU-only builds</td></tr>
       <tr><td>Format</td><td>GGUF</td><td>safetensors</td></tr>
       <tr><td>Strength</td><td>Runs everywhere, one user</td><td>Many concurrent users — PagedAttention</td></tr>
       <tr><td>Install weight</td><td>~100 MB binary</td><td><b>10.31 GB</b> GPU image</td></tr>
-      <tr><td><b>Laptop, no GPU</b></td><td><b>Yes ← you</b></td><td><b>No</b></td></tr>
+      <tr><td><b>Laptop, no GPU</b></td><td><b>Yes ← this workshop</b></td><td>CPU-only; <b>experimental on Mac</b></td></tr>
     </table>
-    <div class="note">vLLM's CPU image exists (<code>vllm/vllm-openai-cpu</code>) but is the wrong tool here: no Apple Silicon build, <code>avx2</code>-only CPUs get "limited features", and its whole design pays off only when many requests share a GPU.</div>
+    <div class="note">vLLM does run without a GPU: an <strong>experimental CPU-only version for Mac</strong>, and a CPU image (<code>vllm/vllm-openai-cpu</code>) for x86. Because of <strong>compatibility</strong> across everyone's laptops and the <strong>size of the image</strong>, we decided to use <strong>llama.cpp for this workshop</strong>.</div>
   </div>
   <div class="foot"><span>© MHP Management- und IT-Beratung GmbH</span><span class="pg"></span></div>
 </section>
@@ -715,9 +715,9 @@ echo -n <span class="s">"The quick brown fox"</span> | wc -c</code></pre>
       <div class="card"><h4>Decode speed (tok/s)</h4><p>How fast the rest streams out. Feels like <strong>speed</strong>.</p></div>
     </div>
     <table style="margin-top:.6em">
-      <tr><th>Model</th><th>tok/s on a laptop CPU</th><th>Feel</th></tr>
-      <tr><td>135M</td><td>40–80</td><td>Instant, useless</td></tr>
-      <tr><td>0.6B</td><td>20–40</td><td>Snappy, weak</td></tr>
+      <tr><th>Model</th><th>tok/s on a laptop CPU</th><th>Output pace</th></tr>
+      <tr><td>135M</td><td>40–80</td><td>Instant</td></tr>
+      <tr><td>0.6B</td><td>20–40</td><td>Snappy</td></tr>
       <tr><td><b>1.7B</b></td><td><b>8–20</b></td><td><b>Comfortable to read</b></td></tr>
       <tr><td>4B</td><td>4–10</td><td>Noticeable wait</td></tr>
       <tr><td>8B</td><td>2–5</td><td>Painful</td></tr>
@@ -780,27 +780,13 @@ model  ──> next step</div>
   <div class="foot" style="margin-left:max(120px,26cqw)"><span></span><span class="pg"></span></div>
 </section>
 
-<!-- 30 · RAG -->
-<section class="slide">
-  <header class="hband"><h2>Concepts · RAG: look it up, don't hope</h2><div class="logo-w"></div></header>
-  <div class="body">
-    <div class="diagram">documents ─> chunk ─> embedding model ─> vectors ─> store
-
-query     ─> embedding model ─> vector ─> nearest neighbours ─> top-k chunks
-
-top-k chunks + query ─> chat model ─> answer  (with citations)</div>
-    <div class="callout" style="margin-top:.9em"><p>Every piece runs locally on your laptop, and the embedding models are tiny — <code>nomic-embed-text-v1.5</code> is <strong>0.15 GB</strong>.<br>A small model plus good retrieval beats a big model guessing.</p></div>
-  </div>
-  <div class="foot"><span>© MHP Management- und IT-Beratung GmbH</span><span class="pg"></span></div>
-</section>
-
 <!-- 31 · EXPECTATIONS -->
 <section class="slide">
   <header class="hband"><h2>What small local models are actually good for</h2><div class="logo-w"></div></header>
   <div class="body">
     <div class="grid g2">
       <div class="card ok">
-        <h4>Genuinely good</h4>
+        <h4>Strengths</h4>
         <ul>
           <li><strong>Embeddings and retrieval</strong> — tiny models, excellent results, zero cost</li>
           <li><strong>Classification and extraction</strong></li>
@@ -810,7 +796,7 @@ top-k chunks + query ─> chat model ─> answer  (with citations)</div>
         </ul>
       </div>
       <div class="card warn">
-        <h4>Genuinely bad</h4>
+        <h4>Weaknesses</h4>
         <ul>
           <li>Correct code across many files</li>
           <li>Reliable tool calling</li>

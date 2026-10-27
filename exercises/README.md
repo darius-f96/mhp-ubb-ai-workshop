@@ -1,8 +1,8 @@
 # Exercises
 
-Seven exercises. Do them in order — each one assumes the previous stack is running.
+Seven exercises. Do them in order — each one assumes the previous stack is running. Exercises 5 and 7 are optional.
 
-Time budgets assume a 16 GB laptop with no GPU. If you are much faster, do the stretch goals. If you are stuck for more than ten minutes, **ask**. The point is the concepts, not the suffering.
+There is no clock: work at your own pace. If you finish early, do the stretch goals. If you are stuck, **ask**. The point is the concepts, not the suffering.
 
 Record your answers in `answers.md` (copy `answers-template.md`). At the end you will push that file to your own fork — which is also a Git exercise.
 
@@ -10,7 +10,7 @@ Record your answers in `answers.md` (copy `answers-template.md`). At the end you
 
 ## Exercise 1 — Benchmark your own machine
 
-**Time:** 10 min · **Goal:** stop guessing about your hardware
+**Goal:** stop guessing about your hardware
 
 Before you choose a model, measure what your laptop can actually do.
 
@@ -44,7 +44,7 @@ If you have an Apple Silicon Mac, run the 1.7B again **without** `-ngl 0` and co
 
 ## Exercise 2 — Break a tiny model on purpose
 
-**Time:** 10 min · **Goal:** see what scale actually buys you
+**Goal:** see what scale actually buys you
 
 Download the 135M model if you have not:
 
@@ -100,7 +100,7 @@ done
 
 ## Exercise 3 — Watch context cost you memory
 
-**Time:** 15 min · **Goal:** understand the constraint that actually limits you
+**Goal:** understand the constraint that actually limits you
 
 Start the server with a small context and watch the startup log:
 
@@ -137,7 +137,7 @@ Finally, push until it hurts. Try `-c 131072` and see what your machine does.
 
 ## Exercise 4 — Hot-swap between specialists
 
-**Time:** 20 min · **Goal:** one port, several models, only one in RAM
+**Goal:** one port, several models, only one in RAM
 
 Use [`configs/llama-swap/config.yaml`](../configs/llama-swap/config.yaml), which defines a chat model, a code model and an embedding model.
 
@@ -189,9 +189,9 @@ curl -s http://127.0.0.1:8090/running | jq
 
 ---
 
-## Exercise 5 — Survive a failure with a gateway
+## Exercise 5 — Survive a failure with a gateway (Optional)
 
-**Time:** 20 min · **Goal:** resilience, and the reason LiteLLM exists
+**Goal:** resilience, and the reason LiteLLM exists
 
 Bring up LiteLLM with [`configs/litellm/`](../configs/litellm/):
 
@@ -250,9 +250,9 @@ curl -s http://127.0.0.1:4000/health -H "Authorization: Bearer $LITELLM_API_KEY"
 
 ## Exercise 6 — Point an agent at your stack
 
-**Time:** 25 min · **Goal:** the payoff — a coding agent running entirely locally
+**Goal:** the payoff — a coding agent running entirely locally
 
-Configure Qwen Code with [`configs/qwen/settings.json`](../configs/qwen/settings.json) so it uses the proxy at `:4000`. Then, in a scratch directory:
+Configure Qwen Code with [`configs/qwen/settings.json`](../configs/qwen/settings.json) so it uses the proxy at `:4000`. Skipped Exercise 5? Run its first code block anyway — this exercise needs LiteLLM up and the key loaded. Then, in a scratch directory:
 
 ```bash
 mkdir -p ~/agent-test && cd ~/agent-test
@@ -280,9 +280,9 @@ Watch what it does. Then ask it something requiring real reasoning:
 
 ---
 
-## Exercise 7 — Build the smallest possible pipeline (stretch)
+## Exercise 7 — Build the smallest possible pipeline (Optional)
 
-**Time:** 30 min · **Goal:** the loop from the last slides of the concepts deck, in twenty lines of bash, on your own machine
+**Goal:** the loop from the last slides of the concepts deck, in twenty lines of bash, on your own machine
 
 Exercise 6 asked what you would need to add to make a small model safe to use unsupervised. This is the smallest honest answer: an agent, a **verify gate that lives outside the agent**, and a retry budget.
 

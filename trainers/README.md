@@ -10,15 +10,6 @@ The rest of the repository — `docs/`, `exercises/`, `slides/`, `configs/`, `sc
 |------|---------|
 | [runbook.md](runbook.md) | Minute-by-minute plan for the 45-minute hands-on block, the pre-day checklist, failure modes ranked by how much session time each consumes, and the teaching beats worth protecting |
 
-## Why it is separate
-
-A student who opens a deck and sees *"What to teach, and what to leave alone"* is reading the stage directions instead of the play. It also leaks the wrong signal: the material should read as confident instruction, not as a presenter's notes about what to hide.
-
-The split is deliberate, not cosmetic:
-
-- **Student pages** answer *what do I run, what will I see, what do I do when it breaks*.
-- **This directory** answers *what order, how long, where will it go wrong, and who needs help first*.
-
 ## Keeping the two in sync
 
 When a student-facing page changes in a way that affects delivery — a new failure mode, a step that overruns, a demo that stops working — update `runbook.md` in the same commit. The runbook's value is that it encodes what actually happened in a room, so it rots faster than the playbooks and needs tending after every session.

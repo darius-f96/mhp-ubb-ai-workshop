@@ -204,10 +204,10 @@ Two different numbers that get conflated:
 
 llama.cpp reports both. Rough expectations on a 16 GB laptop CPU:
 
-| Model | tok/s | Feel |
+| Model | tok/s | Output pace |
 |-------|-------|------|
-| 135M | 40–80 | Instant, useless |
-| 0.6B | 20–40 | Snappy, weak |
+| 135M | 40–80 | Instant |
+| 0.6B | 20–40 | Snappy |
 | 1.7B | 8–20 | Comfortable to read |
 | 4B | 4–10 | Noticeable wait |
 | 8B | 2–5 | Painful |

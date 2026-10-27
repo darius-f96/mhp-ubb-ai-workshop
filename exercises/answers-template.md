@@ -78,7 +78,7 @@ Qwen3-1.7B:
 
 ---
 
-## Exercise 5 — Survive a failure with a gateway
+## Exercise 5 — Survive a failure with a gateway (Optional)
 
 1. Did the `resilient` request succeed with llama-swap down? Where did the tokens come from?
 2. How you could tell which backend served it:
